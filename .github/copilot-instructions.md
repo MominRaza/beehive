@@ -1,2 +1,4 @@
 - We are using bun for package management.
 - We are in the root directory, so no need to change the directory.
+- Before running `bun run dev` check if the server is already running on port 5173. If it is, do not start another instance.
+- Use `openSimpleBrowser` tool to open the browser.
