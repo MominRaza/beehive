@@ -1,0 +1,2 @@
+- We are using bun for package management.
+- We are in the root directory, so no need to change the directory.
