@@ -1,6 +1,5 @@
 <script lang="ts">
     import HudStatsPanel from "./hud/HudStatsPanel.svelte";
-    import HudSelectionPanel from "./hud/HudSelectionPanel.svelte";
     import HudInventoryPanel from "./hud/HudInventoryPanel.svelte";
     import HudChunkPrompt from "./hud/HudChunkPrompt.svelte";
     import HudShopPanel from "./hud/HudShopPanel.svelte";
@@ -9,7 +8,6 @@
 <div class="hud-root">
     <div class="hud-column hud-left">
         <HudStatsPanel />
-        <HudSelectionPanel />
     </div>
 
     <div class="hud-column hud-right">

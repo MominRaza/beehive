@@ -1,6 +1,6 @@
 <script lang="ts">
     import { gameState } from "../stores/farm";
-    import { saveGameState, clearGameState } from "../systems/storage";
+    import { saveGameState } from "../systems/storage";
     import Dialog from "./Dialog.svelte";
     import Snackbar from "./Snackbar.svelte";
 
@@ -49,30 +49,9 @@
             showSnackbar("Failed to save game", "error");
         }
     }
-
-    function handleDeleteSave() {
-        showDialog(
-            "Delete Saved Game",
-            "Are you sure you want to delete your saved game? This action cannot be undone.",
-            "confirm",
-            "Delete",
-            "Cancel",
-            () => {
-                if (clearGameState()) {
-                    showSnackbar(
-                        "Saved game deleted. Refresh the page to start a new game.",
-                        "success",
-                    );
-                } else {
-                    showSnackbar("Failed to delete saved game", "error");
-                }
-            },
-        );
-    }
 </script>
 
 <button class="save-button" onclick={handleSaveGame}>💾 Save</button>
-<button class="delete-button" onclick={handleDeleteSave}>🗑️ Delete Save</button>
 
 <Dialog
     bind:isOpen={dialogOpen}
@@ -113,29 +92,5 @@
         background: #2563eb;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
-    }
-
-    .delete-button {
-        position: fixed;
-        top: 1rem;
-        right: 9rem;
-        padding: 0.6rem 1.2rem;
-        background: #ef4444;
-        color: white;
-        border: none;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        font-size: 0.95rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        pointer-events: auto;
-        z-index: 1000;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .delete-button:hover {
-        background: #dc2626;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
     }
 </style>

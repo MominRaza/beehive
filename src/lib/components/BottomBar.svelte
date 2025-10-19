@@ -1,4 +1,3 @@
-<!-- filepath: c:\Users\jahmad4\web\beehive\src\lib\components\BottomBar.svelte -->
 <script lang="ts">
     import {
         gameState,
@@ -34,15 +33,6 @@
 </script>
 
 <div class="bottom-bar">
-    <!-- Left: Resources -->
-    <div class="resources">
-        <div class="resource">
-            <span class="icon"></span>
-            <span class="value">{$gameState.inventory.wood}</span>
-            <span class="label">Wood</span>
-        </div>
-    </div>
-
     <!-- Center: Quick slots -->
     <div class="quick-slots">
         <!-- Tools -->
@@ -95,33 +85,6 @@
         pointer-events: auto;
         backdrop-filter: blur(10px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    }
-
-    .resources {
-        display: flex;
-        gap: 1rem;
-    }
-
-    .resource {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: white;
-        font-weight: 600;
-        font-size: 1rem;
-    }
-
-    .resource .icon {
-        font-size: 1.5rem;
-    }
-
-    .resource .value {
-        min-width: 40px;
-    }
-
-    .resource .label {
-        font-size: 0.75rem;
-        opacity: 0.8;
     }
 
     .quick-slots {

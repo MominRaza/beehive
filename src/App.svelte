@@ -1,11 +1,14 @@
 <script lang="ts">
   import MenuScreen from "./lib/components/MenuScreen.svelte";
+  import { gameState } from "./lib/stores/farm";
+  import { createInitialState } from "./lib/stores/farmHelpers";
+  import { clearGameState } from "./lib/systems/storage";
 
   let GameComponent: any = null;
   let showMenu = true;
   let isLoading = false;
 
-  async function handleStartGame() {
+  async function loadGame() {
     isLoading = true;
     try {
       // Dynamic import to code-split the Game component
@@ -18,10 +21,22 @@
       isLoading = false;
     }
   }
+
+  function handleContinueGame() {
+    // Load existing game (already loaded in farmState.ts)
+    loadGame();
+  }
+
+  function handleNewGame() {
+    // Reset the game state
+    clearGameState();
+    gameState.set(createInitialState());
+    loadGame();
+  }
 </script>
 
 {#if showMenu}
-  <MenuScreen on:startGame={handleStartGame} />
+  <MenuScreen on:continueGame={handleContinueGame} on:newGame={handleNewGame} />
 {:else if isLoading}
   <div class="loading-screen">
     <div class="spinner"></div>

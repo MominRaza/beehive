@@ -96,15 +96,25 @@ export function selectBuilding(buildingId: string | null): void {
 }
 
 export function selectChunkForPurchase(chunkId: string | null): void {
-    gameState.update((state) => ({
-        ...state,
-        selectedChunkId: chunkId,
-        selectedTileIndex: null,
-        selectedSeed: null,
-        selectedTool: null,
-        selectedTree: null,
-        selectedBuilding: null,
-    }));
+    gameState.update((state) => {
+        // If deselecting chunk (null), don't clear tools/seeds
+        if (chunkId === null) {
+            return {
+                ...state,
+                selectedChunkId: null,
+            };
+        }
+        // If selecting a chunk, clear other selections
+        return {
+            ...state,
+            selectedChunkId: chunkId,
+            selectedTileIndex: null,
+            selectedSeed: null,
+            selectedTool: null,
+            selectedTree: null,
+            selectedBuilding: null,
+        };
+    });
 }
 
 // Fix import

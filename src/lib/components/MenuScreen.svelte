@@ -1,10 +1,21 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
+    import { createEventDispatcher, onMount } from "svelte";
+    import { hasSavedGame } from "../systems/storage";
 
     const dispatch = createEventDispatcher();
 
-    function handleStartGame() {
-        dispatch("startGame");
+    let savedGameExists = false;
+
+    onMount(() => {
+        savedGameExists = hasSavedGame();
+    });
+
+    function handleContinueGame() {
+        dispatch("continueGame");
+    }
+
+    function handleNewGame() {
+        dispatch("newGame");
     }
 </script>
 
@@ -12,9 +23,21 @@
     <div class="menu-content">
         <h1 class="game-title">🐝 Beehive Farm</h1>
         <div class="menu-buttons">
-            <button class="menu-button primary" on:click={handleStartGame}>
-                Start Game
-            </button>
+            {#if savedGameExists}
+                <button
+                    class="menu-button primary"
+                    on:click={handleContinueGame}
+                >
+                    Continue Game
+                </button>
+                <button class="menu-button" on:click={handleNewGame}>
+                    New Game
+                </button>
+            {:else}
+                <button class="menu-button primary" on:click={handleNewGame}>
+                    Start Game
+                </button>
+            {/if}
             <button class="menu-button"> How to Play </button>
             <button class="menu-button"> Credits </button>
         </div>
