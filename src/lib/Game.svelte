@@ -1,11 +1,22 @@
 <script lang="ts">
+  import GameCanvas from "./components/GameCanvas.svelte";
+  import GameHud from "./components/GameHud.svelte";
+  import BottomBar from "./components/BottomBar.svelte";
+  import Settings from "./components/Settings.svelte";
 </script>
 
-<h1>Beehive Game</h1>
+<div class="game-container">
+  <GameCanvas />
+  <GameHud />
+  <BottomBar />
+  <Settings />
+</div>
 
 <style>
-  h1 {
-    text-align: center;
-    margin-top: 2rem;
+  .game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
   }
 </style>
