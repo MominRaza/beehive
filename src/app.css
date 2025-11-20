@@ -1,11 +1,51 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Game Theme Colors */
+  --color-primary: #4ade80;
+  /* Bright Green */
+  --color-primary-dark: #22c55e;
+  --color-secondary: #a855f7;
+  /* Purple */
+  --color-accent: #fbbf24;
+  /* Gold */
+  --color-danger: #ef4444;
+  /* Red */
+
+  --color-surface: rgba(30, 41, 59, 0.9);
+  /* Dark Blue-Grey Transparent */
+  --color-surface-light: rgba(51, 65, 85, 0.9);
+
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+
+  /* Glassmorphism & UI */
+  --glass-bg: rgba(0, 0, 0, 0.4);
+  --glass-bg-light: rgba(255, 255, 255, 0.05);
+  --glass-bg-hover: rgba(255, 255, 255, 0.1);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-border-faint: 1px solid rgba(255, 255, 255, 0.05);
+  --glass-blur: blur(12px);
+  --glass-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --overlay-blur: blur(4px);
+  
+  --divider-color: rgba(255, 255, 255, 0.1);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  color-scheme: dark;
+  color: var(--color-text);
+  background-color: #0f172a;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -19,6 +59,30 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  user-select: none;
+  /* Prevent text selection in game */
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 #app {
