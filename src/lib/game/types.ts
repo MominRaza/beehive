@@ -16,10 +16,10 @@ export const GROWTH_TIMES: Record<string, number> = {
 };
 
 export const PRICES: Record<string, { buy: number, sell: number }> = {
-    "wheat_seed": { buy: 5, sell: 2 },
-    "carrot_seed": { buy: 10, sell: 5 },
-    "tomato_seed": { buy: 15, sell: 7 },
-    "tree_sapling": { buy: 20, sell: 10 },
+    "wheat_seed": { buy: 5, sell: -1 },
+    "carrot_seed": { buy: 10, sell: -1 },
+    "tomato_seed": { buy: 15, sell: -1 },
+    "tree_sapling": { buy: 20, sell: -1 },
     "wheat_produce": { buy: -1, sell: 10 },
     "carrot_produce": { buy: -1, sell: 18 },
     "tomato_produce": { buy: -1, sell: 25 },

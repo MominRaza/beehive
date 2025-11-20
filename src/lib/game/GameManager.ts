@@ -74,10 +74,6 @@ export class GameManager {
             // Try harvesting tree
             if (this.treeManager.harvest(x, z)) {
                 if (this.inventoryManager.addItem("wood", 2)) {
-                    // Chance for sapling?
-                    if (Math.random() > 0.5) {
-                        this.inventoryManager.addItem("tree_sapling", 1);
-                    }
                     return { success: true };
                 } else {
                     return { success: false, message: "Inventory Full! (Unexpected)" };
@@ -94,9 +90,12 @@ export class GameManager {
                 }
             }
         } else if (tool === "dirt" || tool === "grass" || tool === "path") {
-            // When changing tile type, remove existing plants
-            this.cropManager.remove(x, z);
-            this.treeManager.remove(x, z);
+            // Check if tile is occupied
+            const key = `${x},${z}`;
+            if (this.cropManager.crops.has(key) || this.treeManager.trees.has(key)) {
+                return { success: false, message: "Tile is occupied!" };
+            }
+
             this.gridManager.createTile(x, z, tool);
             return { success: true };
         }
