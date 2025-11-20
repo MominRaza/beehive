@@ -2,9 +2,12 @@
     import { onMount, onDestroy } from "svelte";
     import * as THREE from "three";
     import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-    import { TileManager } from "./game/TileManager";
+    import { GameManager } from "./game/GameManager";
     import { InputManager } from "./game/InputManager";
+    import { PersistenceManager } from "./game/PersistenceManager";
     import HUD from "./HUD.svelte";
+    import type { ToolType } from "./game/types";
+    import { PRICES } from "./game/types";
 
     let container: HTMLDivElement;
     let scene: THREE.Scene;
@@ -13,19 +16,16 @@
     let controls: OrbitControls;
     let ground: THREE.Mesh;
     let animationId: number;
+    let lastTime: number = 0;
 
-    let tileManager: TileManager;
+    let gameManager: GameManager;
     let inputManager: InputManager;
 
-    let selectedTool:
-        | "none"
-        | "dirt"
-        | "grass"
-        | "path"
-        | "water"
-        | "wheat"
-        | "carrot"
-        | "tomato" = "none";
+    let selectedTool: ToolType = "none";
+    let inventory: any = {};
+    let produceCount: number = 0;
+    let maxCapacity: number = 20;
+    let notification: string | null = null;
 
     onMount(() => {
         init();
@@ -48,7 +48,7 @@
         if (animationId) {
             cancelAnimationFrame(animationId);
         }
-        if (tileManager) tileManager.dispose();
+        if (gameManager) gameManager.dispose();
         if (inputManager) inputManager.dispose();
     });
 
@@ -102,35 +102,37 @@
         scene.add(ground);
 
         // Managers
-        tileManager = new TileManager(scene);
+        gameManager = new GameManager(scene);
         inputManager = new InputManager(camera, ground, scene);
+
+        // Subscribe to inventory
+        gameManager.inventoryManager.subscribe((inv) => {
+            inventory = inv;
+            produceCount = gameManager.inventoryManager.getProduceCount();
+            maxCapacity = gameManager.inventoryManager.getMaxCapacity();
+        });
 
         loadGame();
     }
 
     function saveGame() {
-        const data = tileManager.serialize();
-        localStorage.setItem("beehive_save", JSON.stringify(data));
-        alert("Game Saved!");
+        if (PersistenceManager.saveGame(gameManager)) {
+            notification = "Game Saved!";
+        } else {
+            notification = "Failed to save game.";
+        }
     }
 
     function deleteGame() {
-        localStorage.removeItem("beehive_save");
-        location.reload(); // Reload to reset state
+        PersistenceManager.deleteSave();
+        notification = "Save Deleted!";
+        setTimeout(() => {
+            location.reload(); // Reload to reset state
+        }, 1000);
     }
 
     function loadGame() {
-        const savedData = localStorage.getItem("beehive_save");
-        if (savedData) {
-            try {
-                const data = JSON.parse(savedData);
-                tileManager.load(data);
-            } catch (e) {
-                console.error("Failed to load save data", e);
-                // Fallback to default
-                prefillGrass();
-            }
-        } else {
+        if (!PersistenceManager.loadGame(gameManager)) {
             prefillGrass();
         }
     }
@@ -139,16 +141,23 @@
         // Prefill with grass
         for (let x = -10; x < 10; x++) {
             for (let z = -10; z < 10; z++) {
-                tileManager.createTile(x + 0.5, z + 0.5, "grass");
+                gameManager.gridManager.createTile(x + 0.5, z + 0.5, "grass");
             }
         }
     }
 
-    function animate() {
+    function animate(time: number = 0) {
         animationId = requestAnimationFrame(animate);
+
+        const deltaTime = (time - lastTime) / 1000;
+        lastTime = time;
 
         if (controls) {
             controls.update();
+        }
+
+        if (gameManager) {
+            gameManager.update(deltaTime);
         }
 
         renderer.render(scene, camera);
@@ -181,20 +190,9 @@
             const x = Math.floor(point.x) + 0.5;
             const z = Math.floor(point.z) + 0.5;
 
-            if (
-                selectedTool === "wheat" ||
-                selectedTool === "carrot" ||
-                selectedTool === "tomato"
-            ) {
-                tileManager.createCrop(x, z, selectedTool);
-            } else if (selectedTool === "water") {
-                tileManager.waterTile(x, z);
-            } else if (
-                selectedTool === "dirt" ||
-                selectedTool === "grass" ||
-                selectedTool === "path"
-            ) {
-                tileManager.createTile(x, z, selectedTool);
+            const result = gameManager.handleInput(selectedTool, x, z);
+            if (result && !result.success && result.message) {
+                notification = result.message;
             }
         }
     }
@@ -214,74 +212,60 @@
             const x = Math.floor(point.x) + 0.5;
             const z = Math.floor(point.z) + 0.5;
 
-            // Check validity for crops or water
-            if (
-                selectedTool === "wheat" ||
-                selectedTool === "carrot" ||
-                selectedTool === "tomato" ||
-                selectedTool === "water"
-            ) {
-                const tileType = tileManager.getTileType(x, z);
-                if (tileType === "dirt") {
-                    if (selectedTool === "water") {
-                        // Water tool
-                        inputManager.updateHoverIndicator(
-                            x,
-                            z,
-                            true,
-                            0x0000ff,
-                            1.1,
-                            0.05,
-                        ); // Blue, slightly larger
-                    } else {
-                        let color = 0xffff00; // Wheat
-                        if (selectedTool === "carrot") color = 0xffa500;
-                        if (selectedTool === "tomato") color = 0xff6347;
-
-                        inputManager.updateHoverIndicator(
-                            x,
-                            z,
-                            true,
-                            color,
-                            0.5,
-                            0.35,
-                        );
-                    }
-                } else {
-                    inputManager.updateHoverIndicator(0, 0, false);
-                }
-                return;
-            }
-
-            // Update indicator color based on tool
-            let color = 0xffffff;
-            let scaleY = 1;
-            let posY = 0.05;
-
-            if (selectedTool === "dirt") {
-                color = 0x8b4513;
-                scaleY = 1;
-                posY = 0.05;
-            } else if (selectedTool === "grass") {
-                color = 0x228b22;
-                scaleY = 3;
-                posY = 0.15;
-            } else if (selectedTool === "path") {
-                color = 0x808080;
-                scaleY = 4;
-                posY = 0.2;
-            }
-
-            inputManager.updateHoverIndicator(x, z, true, color, scaleY, posY);
+            const hoverState = gameManager.getHoverState(selectedTool, x, z);
+            inputManager.updateHoverIndicator(
+                x,
+                z,
+                hoverState.visible,
+                hoverState.color,
+                hoverState.scaleY,
+                hoverState.posY,
+            );
         } else {
             inputManager.updateHoverIndicator(0, 0, false);
+        }
+    }
+
+    function handleBuy(event: CustomEvent) {
+        const item = event.detail.item;
+        const price = PRICES[item].buy;
+
+        if (inventory["coins"] >= price) {
+            gameManager.inventoryManager.removeItem("coins", price);
+            gameManager.inventoryManager.addItem(item, 1);
+            notification = `Bought ${item.replace("_", " ")}!`;
+        } else {
+            notification = "Not enough coins!";
+        }
+    }
+
+    function handleSell(event: CustomEvent) {
+        const item = event.detail.item;
+        const price = PRICES[item].sell;
+
+        if (inventory[item] > 0) {
+            gameManager.inventoryManager.removeItem(item, 1);
+            gameManager.inventoryManager.addItem("coins", price);
+            notification = `Sold ${item.replace("_", " ")}!`;
+        } else {
+            notification = "Nothing to sell!";
         }
     }
 </script>
 
 <div bind:this={container} class="game-container"></div>
 
-<HUD bind:selectedTool on:save={saveGame} on:delete={deleteGame} />
+<HUD
+    bind:selectedTool
+    {inventory}
+    {produceCount}
+    {maxCapacity}
+    bind:notification
+    on:save={saveGame}
+    on:delete={deleteGame}
+    on:buy={handleBuy}
+    on:sell={handleSell}
+/>
 
 <style>
     .game-container {
