@@ -1,8 +1,0 @@
-- We are using bun for package management.
-- We are in the root directory, so no need to change the directory.
-- Before running `bun run dev` check if the server is already running on port 5173. If it is, do not start another instance.
-- Use `openSimpleBrowser` tool to open the browser.
-- Split code into smaller, focused files instead of putting everything in one large file.
-- Do NOT create unnecessary markdown files to document changes unless specifically requested.
-- Keep files under 300 lines when possible.
-- Extract reusable logic into separate utility/system files.
