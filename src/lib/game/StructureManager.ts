@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SURFACE_HEIGHTS } from './types';
 
 export class StructureManager {
     private scene: THREE.Scene;
@@ -38,7 +39,8 @@ export class StructureManager {
         door.position.set(0, 0.3, 0.76);
         group.add(door);
 
-        group.position.set(x, 0, z);
+        // Place on top of grass
+        group.position.set(x, SURFACE_HEIGHTS.GRASS, z);
         this.scene.add(group);
         this.hut = group;
     }

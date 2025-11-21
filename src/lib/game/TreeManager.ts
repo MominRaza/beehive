@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GROWTH_TIMES } from './types';
+import { GROWTH_TIMES, SURFACE_HEIGHTS } from './types';
 
 export class TreeManager {
     private scene: THREE.Scene;
@@ -35,7 +35,7 @@ export class TreeManager {
         group.add(leaves);
 
         // Grass height is 0.3, so place tree on top
-        group.position.set(x, 0.3, z);
+        group.position.set(x, SURFACE_HEIGHTS.GRASS, z);
 
         this.scene.add(group);
         this.trees.set(key, { mesh: group, growthStage: 0, timer: 0 });
@@ -101,7 +101,7 @@ export class TreeManager {
         leaves.position.y = leavesY;
         group.add(leaves);
 
-        group.position.set(x, 0.3, z);
+        group.position.set(x, SURFACE_HEIGHTS.GRASS, z);
         this.scene.add(group);
         data.mesh = group;
     }

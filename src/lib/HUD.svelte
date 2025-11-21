@@ -43,6 +43,7 @@
         } else if (event.key === "Escape") {
             if (showMarket) showMarket = false;
             else if (showInventory) showInventory = false;
+            else if (selectedTool !== "none") selectedTool = "none";
             else showPauseMenu = !showPauseMenu;
         }
     }
@@ -98,6 +99,10 @@
         }}
         onReset={() => {
             dispatch("delete");
+            showPauseMenu = false;
+        }}
+        onTestScene={() => {
+            dispatch("openTestScene");
             showPauseMenu = false;
         }}
     />

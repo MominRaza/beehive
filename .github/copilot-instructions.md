@@ -1,5 +1,4 @@
 - This project uses **Bun** as the package manager and runtime.
-- Always check if the development server is running. If not, run `bun run dev`.
-- Always launch the simple browser to see the changes after making edits to the game.
-
-
+- Check if port 5173 is in use (use `Get-NetTCPConnection -LocalPort 5173`):
+  - In use: Launch browser at http://localhost:5173/beehive/
+  - Not in use: Run `bun run dev`, then launch browser at http://localhost:5173/beehive/

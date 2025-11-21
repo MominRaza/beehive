@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import type { TileType } from './types';
+import { type TileType, TILE_DIMENSIONS, SURFACE_HEIGHTS } from './types';
 
 export class GridManager {
     private scene: THREE.Scene;
-    public tiles = new Map<string, { mesh: THREE.Mesh; type: TileType; isWatered?: boolean }>();
+    public tiles = new Map<string, { mesh: THREE.Object3D; type: TileType; isWatered?: boolean }>();
 
     constructor(scene: THREE.Scene) {
         this.scene = scene;
@@ -16,27 +16,61 @@ export class GridManager {
         if (this.tiles.has(key)) {
             const existingData = this.tiles.get(key)!;
             this.scene.remove(existingData.mesh);
-            existingData.mesh.geometry.dispose();
-            (existingData.mesh.material as THREE.Material).dispose();
+            this.disposeObject(existingData.mesh);
             this.tiles.delete(key);
         }
 
-        let height = 0.1;
-        let color = 0x8b4513; // Default dirt
-        if (type === "grass") {
-            color = 0x228b22; // Forest Green
-            height = 0.3;
+        let tileObject: THREE.Object3D;
+        const dirtMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+        const grassMat = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+        const pathMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
+
+        if (type === "dirt") {
+            // Just dirt
+            const geometry = new THREE.BoxGeometry(1, TILE_DIMENSIONS.DIRT_HEIGHT, 1);
+            tileObject = new THREE.Mesh(geometry, dirtMat);
+            tileObject.position.set(x, TILE_DIMENSIONS.DIRT_HEIGHT / 2, z);
+        } else if (type === "grass") {
+            // Dirt + Grass
+            tileObject = new THREE.Group();
+
+            const dirtGeo = new THREE.BoxGeometry(1, TILE_DIMENSIONS.DIRT_HEIGHT, 1);
+            const dirtMesh = new THREE.Mesh(dirtGeo, dirtMat);
+            dirtMesh.position.y = TILE_DIMENSIONS.DIRT_HEIGHT / 2;
+            tileObject.add(dirtMesh);
+
+            const grassGeo = new THREE.BoxGeometry(1, TILE_DIMENSIONS.GRASS_LAYER_HEIGHT, 1);
+            const grassMesh = new THREE.Mesh(grassGeo, grassMat);
+            grassMesh.position.y = TILE_DIMENSIONS.DIRT_HEIGHT + (TILE_DIMENSIONS.GRASS_LAYER_HEIGHT / 2);
+            tileObject.add(grassMesh);
+
+            tileObject.position.set(x, 0, z);
         } else if (type === "path") {
-            color = 0x808080; // Grey
-            height = 0.4;
+            // Dirt + Grass + Path
+            tileObject = new THREE.Group();
+
+            const dirtGeo = new THREE.BoxGeometry(1, TILE_DIMENSIONS.DIRT_HEIGHT, 1);
+            const dirtMesh = new THREE.Mesh(dirtGeo, dirtMat);
+            dirtMesh.position.y = TILE_DIMENSIONS.DIRT_HEIGHT / 2;
+            tileObject.add(dirtMesh);
+
+            const grassGeo = new THREE.BoxGeometry(1, TILE_DIMENSIONS.GRASS_LAYER_HEIGHT, 1);
+            const grassMesh = new THREE.Mesh(grassGeo, grassMat);
+            grassMesh.position.y = TILE_DIMENSIONS.DIRT_HEIGHT + (TILE_DIMENSIONS.GRASS_LAYER_HEIGHT / 2);
+            tileObject.add(grassMesh);
+
+            const pathGeo = new THREE.BoxGeometry(1, TILE_DIMENSIONS.PATH_LAYER_HEIGHT, 1);
+            const pathMesh = new THREE.Mesh(pathGeo, pathMat);
+            pathMesh.position.y = TILE_DIMENSIONS.DIRT_HEIGHT + TILE_DIMENSIONS.GRASS_LAYER_HEIGHT + (TILE_DIMENSIONS.PATH_LAYER_HEIGHT / 2);
+            tileObject.add(pathMesh);
+
+            tileObject.position.set(x, 0, z);
+        } else {
+            tileObject = new THREE.Group();
         }
 
-        const geometry = new THREE.BoxGeometry(1, height, 1);
-        const material = new THREE.MeshStandardMaterial({ color });
-        const tile = new THREE.Mesh(geometry, material);
-        tile.position.set(x, height / 2, z);
-        this.scene.add(tile);
-        this.tiles.set(key, { mesh: tile, type });
+        this.scene.add(tileObject);
+        this.tiles.set(key, { mesh: tileObject, type });
     }
 
     waterTile(x: number, z: number) {
@@ -47,8 +81,10 @@ export class GridManager {
 
         if (!tileData.isWatered) {
             tileData.isWatered = true;
-            const material = tileData.mesh.material as THREE.MeshStandardMaterial;
-            material.color.setHex(0x5c2e0e); // Darker brown for wet dirt
+            if (tileData.mesh instanceof THREE.Mesh) {
+                const material = tileData.mesh.material as THREE.MeshStandardMaterial;
+                material.color.setHex(0x5c2e0e); // Darker brown for wet dirt
+            }
         }
     }
 
@@ -57,11 +93,23 @@ export class GridManager {
         return this.tiles.get(key)?.type;
     }
 
+    private disposeObject(obj: THREE.Object3D) {
+        obj.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+                child.geometry.dispose();
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => m.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+        });
+    }
+
     dispose() {
         this.tiles.forEach((data) => {
             this.scene.remove(data.mesh);
-            data.mesh.geometry.dispose();
-            (data.mesh.material as THREE.Material).dispose();
+            this.disposeObject(data.mesh);
         });
         this.tiles.clear();
     }

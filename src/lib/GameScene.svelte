@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
+    import { createEventDispatcher, onMount, onDestroy } from "svelte";
     import * as THREE from "three";
     import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
     import { GameManager } from "./game/GameManager";
@@ -8,6 +8,8 @@
     import HUD from "./HUD.svelte";
     import type { ToolType } from "./game/types";
     import { PRICES } from "./game/types";
+
+    const dispatch = createEventDispatcher();
 
     let container: HTMLDivElement;
     let scene: THREE.Scene;
@@ -179,6 +181,12 @@
     }
 
     function onPointerDown(event: MouseEvent) {
+        // Only allow left click (button 0)
+        if (event.button !== 0) return;
+
+        // Only allow interaction if clicking on the canvas (not HUD)
+        if (event.target !== renderer.domElement) return;
+
         if (selectedTool === "none") return;
 
         const intersect = inputManager.getIntersection(event);
@@ -198,7 +206,7 @@
     }
 
     function onPointerMove(event: MouseEvent) {
-        if (selectedTool === "none") {
+        if (selectedTool === "none" || event.target !== renderer.domElement) {
             inputManager.updateHoverIndicator(0, 0, false);
             return;
         }
@@ -265,6 +273,7 @@
     on:delete={deleteGame}
     on:buy={handleBuy}
     on:sell={handleSell}
+    on:openTestScene={() => dispatch("openTestScene")}
 />
 
 <style>

@@ -25,3 +25,15 @@ export const PRICES: Record<string, { buy: number, sell: number }> = {
     "tomato_produce": { buy: -1, sell: 25 },
     "wood": { buy: -1, sell: 15 }
 };
+
+export const TILE_DIMENSIONS = {
+    DIRT_HEIGHT: 0.1,
+    GRASS_LAYER_HEIGHT: 0.1,
+    PATH_LAYER_HEIGHT: 0.1,
+};
+
+export const SURFACE_HEIGHTS = {
+    DIRT: TILE_DIMENSIONS.DIRT_HEIGHT,
+    GRASS: TILE_DIMENSIONS.DIRT_HEIGHT + TILE_DIMENSIONS.GRASS_LAYER_HEIGHT,
+    PATH: TILE_DIMENSIONS.DIRT_HEIGHT + TILE_DIMENSIONS.GRASS_LAYER_HEIGHT + TILE_DIMENSIONS.PATH_LAYER_HEIGHT,
+};

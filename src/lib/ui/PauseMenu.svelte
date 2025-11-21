@@ -5,6 +5,7 @@
     export let onResume: () => void;
     export let onSave: () => void;
     export let onReset: () => void;
+    export let onTestScene: () => void;
 </script>
 
 <div class="pause-overlay">
@@ -24,6 +25,13 @@
                     className="full-width"
                 >
                     💾 Save Game
+                </GameButton>
+                <GameButton
+                    variant="secondary"
+                    onClick={onTestScene}
+                    className="full-width"
+                >
+                    🧪 Test Scene
                 </GameButton>
                 <div class="divider"></div>
                 <GameButton
