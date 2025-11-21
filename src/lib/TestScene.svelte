@@ -30,8 +30,7 @@
     // State
     let selectedType: string = "house";
     let selectedTile: string = "grass";
-    let selectedGridSize: number = 2;
-    let selectedStage: number = 2; // Default to fully grown/complete
+    let selectedGridSize: number = 5;
     let showHighlights: boolean = false;
     let highlightMesh: THREE.Mesh | undefined;
 
@@ -48,6 +47,8 @@
         { id: "tomato", name: "Tomato" },
         { id: "none", name: "None" },
     ];
+
+    const growableTypes = ["oak", "pine", "wheat", "carrot", "tomato"];
 
     const tileTypes = [
         { id: "grass", name: "Grass" },
@@ -184,14 +185,31 @@
             // Let's make a new one.
             structureManager = new StructureManager(scene);
             // It creates at 0,0 by default
-        } else if (selectedType === "oak" || selectedType === "pine") {
-            treeManager.createTree(0, 0, selectedType as any);
-            // Force stage
-            const key = "0,0";
-            const tree = treeManager.trees.get(key);
-            if (tree && selectedStage > 0) {
-                tree.growthStage = selectedStage;
-                treeManager.updateVisuals(tree);
+        } else if (growableTypes.includes(selectedType)) {
+            const isTree = selectedType === "oak" || selectedType === "pine";
+
+            // Display all 3 stages: 0, 1, 2
+            for (let stage = 0; stage <= 2; stage++) {
+                // Position them: -2, 0, 2
+                const x = (stage - 1) * 2;
+                const z = 0;
+                const key = `${x},${z}`;
+
+                if (isTree) {
+                    treeManager.createTree(x, z, selectedType as any);
+                    const tree = treeManager.trees.get(key);
+                    if (tree) {
+                        tree.growthStage = stage;
+                        treeManager.updateVisuals(tree);
+                    }
+                } else {
+                    cropManager.createCrop(x, z, selectedType as any);
+                    const crop = cropManager.crops.get(key);
+                    if (crop) {
+                        crop.growthStage = stage;
+                        cropManager.updateVisuals(crop);
+                    }
+                }
             }
         } else if (selectedType === "sign") {
             signManager?.createSingleSign(0, 0);
@@ -223,15 +241,6 @@
             fenceManager?.createSingleFence(0, 0);
         } else if (selectedType === "none") {
             // Do nothing
-        } else {
-            // Crops
-            cropManager.createCrop(0, 0, selectedType as CropType);
-            const key = "0,0";
-            const crop = cropManager.crops.get(key);
-            if (crop && selectedStage > 0) {
-                crop.growthStage = selectedStage;
-                cropManager.updateVisuals(crop);
-            }
         }
     }
 
@@ -279,6 +288,8 @@
                     <option value={1}>1x1</option>
                     <option value={2}>2x2</option>
                     <option value={3}>3x3</option>
+                    <option value={5}>5x5</option>
+                    <option value={7}>7x7</option>
                 </select>
             </div>
         {/if}
@@ -306,22 +317,6 @@
                     />
                     Show Highlights
                 </label>
-            </div>
-        {/if}
-
-        {#if selectedType !== "house" && selectedType !== "none"}
-            <div class="control-group">
-                <label for="stage-select">Growth Stage:</label>
-                <input
-                    id="stage-select"
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="1"
-                    bind:value={selectedStage}
-                    on:input={updateObject}
-                />
-                <span>{selectedStage}</span>
             </div>
         {/if}
 
