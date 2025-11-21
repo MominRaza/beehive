@@ -33,12 +33,14 @@
         window.addEventListener("resize", onWindowResize);
         window.addEventListener("pointerdown", onPointerDown);
         window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("keydown", onKeyDown);
     });
 
     onDestroy(() => {
         window.removeEventListener("resize", onWindowResize);
         window.removeEventListener("pointerdown", onPointerDown);
         window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("keydown", onKeyDown);
         if (renderer) {
             renderer.dispose();
         }
@@ -50,7 +52,66 @@
         }
         if (gameManager) gameManager.dispose();
         if (inputManager) inputManager.dispose();
+        if (renderer && renderer.domElement) {
+            renderer.domElement.removeEventListener("wheel", onMouseWheel);
+        }
     });
+
+    function onMouseWheel(event: WheelEvent) {
+        event.preventDefault();
+
+        const zoomSpeed = 0.1;
+        const direction = event.deltaY > 0 ? -1 : 1;
+        const factor = 1 + zoomSpeed * direction;
+
+        // 1. Get world point under mouse BEFORE zoom
+        const intersect = inputManager.getIntersection(event);
+        if (!intersect) {
+            // Fallback to center zoom if not hovering ground
+            const newZoom = camera.zoom * factor;
+            camera.zoom = Math.max(
+                controls.minZoom,
+                Math.min(controls.maxZoom, newZoom),
+            );
+            camera.updateProjectionMatrix();
+            return;
+        }
+        const pointBefore = intersect.point.clone();
+
+        // 2. Apply Zoom
+        const newZoom = camera.zoom * factor;
+        const clampedZoom = Math.max(
+            controls.minZoom,
+            Math.min(controls.maxZoom, newZoom),
+        );
+
+        if (camera.zoom === clampedZoom) return; // No change
+
+        camera.zoom = clampedZoom;
+        camera.updateProjectionMatrix();
+
+        // 3. Get world point under mouse AFTER zoom (it shifted because camera didn't move)
+        // We need to raycast again. Since we haven't moved the camera yet, the ray from the same mouse position
+        // will hit a different point on the ground plane?
+        // Actually, for Orthographic, the ray origin changes but direction is same.
+        // Let's use the InputManager to get the new intersection.
+        const intersectAfter = inputManager.getIntersection(event);
+
+        if (intersectAfter) {
+            const pointAfter = intersectAfter.point;
+
+            // 4. Calculate shift needed to bring pointBefore back to mouse position
+            const deltaX = pointAfter.x - pointBefore.x;
+            const deltaZ = pointAfter.z - pointBefore.z;
+
+            // 5. Pan camera and target
+            camera.position.x -= deltaX;
+            camera.position.z -= deltaZ;
+            controls.target.x -= deltaX;
+            controls.target.z -= deltaZ;
+            controls.update();
+        }
+    }
 
     function init() {
         // Scene
@@ -68,7 +129,7 @@
             0.1,
             1000,
         );
-        camera.position.set(10, 10, 10);
+        camera.position.set(100, 100, 100); // Moved further out
         camera.lookAt(0, 0, 0);
 
         // Renderer
@@ -79,10 +140,15 @@
         // Controls
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableRotate = false; // Disable rotation
-        controls.enableZoom = true;
+        controls.enableZoom = false; // Disable default zoom to handle it manually
         controls.enablePan = true;
-        controls.minZoom = 0.5; // Prevent zooming out too far
-        controls.maxZoom = 2; // Prevent zooming in too close
+        controls.minZoom = 0.1;
+        controls.maxZoom = 5;
+
+        // Custom Zoom-to-Cursor
+        renderer.domElement.addEventListener("wheel", onMouseWheel, {
+            passive: false,
+        });
 
         // Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -93,7 +159,7 @@
         scene.add(directionalLight);
 
         // Ground
-        const groundGeometry = new THREE.PlaneGeometry(20, 20);
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
         const groundMaterial = new THREE.MeshBasicMaterial({
             visible: false,
         }); // Invisible for raycasting
@@ -133,9 +199,9 @@
     }
 
     function prefillGrass() {
-        // Prefill with grass
-        for (let x = -10; x < 10; x++) {
-            for (let z = -10; z < 10; z++) {
+        // Prefill with grass (100x100 grid)
+        for (let x = -50; x < 50; x++) {
+            for (let z = -50; z < 50; z++) {
                 gameManager.gridManager.createTile(x + 0.5, z + 0.5, "grass");
             }
         }
@@ -230,7 +296,7 @@
     function handleBuy(event: CustomEvent) {
         const item = event.detail.item;
         const price = PRICES[item].buy;
-        
+
         // We can access inventory via gameManager or store, but gameManager handles logic
         if (gameManager.inventoryManager.getCount("coins") >= price) {
             gameManager.inventoryManager.removeItem("coins", price);
@@ -251,6 +317,16 @@
             notification = `Sold ${item.replace("_", " ")}!`;
         } else {
             notification = "Nothing to sell!";
+        }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+        if (
+            (event.ctrlKey || event.metaKey) &&
+            event.key.toLowerCase() === "s"
+        ) {
+            event.preventDefault();
+            saveGame();
         }
     }
 </script>

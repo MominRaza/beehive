@@ -190,7 +190,7 @@ export class GameManager {
     }
 
     load(data: { tiles: any[], crops: any[], trees?: any[], inventory?: any }) {
-        this.dispose(); // Clear current state
+        this.clear(); // Clear current state
 
         // Re-create hut
         this.structureManager = new StructureManager(this.scene);
@@ -231,6 +231,13 @@ export class GameManager {
                 }
             });
         }
+    }
+
+    clear() {
+        this.gridManager.clear();
+        this.cropManager.dispose(); // Crops are individual meshes, so dispose is fine
+        this.treeManager.dispose(); // Trees are individual meshes, so dispose is fine
+        this.structureManager.dispose();
     }
 
     dispose() {
