@@ -6,6 +6,7 @@
     import { InputManager } from "./game/InputManager";
     import { PersistenceManager } from "./game/PersistenceManager";
     import HUD from "./HUD.svelte";
+    import ConfirmationDialog from "./ui/ConfirmationDialog.svelte";
     import type { ToolType } from "./game/types";
     import { PRICES } from "./game/types";
 
@@ -26,6 +27,7 @@
     let selectedTool: ToolType = "none";
     // inventory, produceCount, maxCapacity removed as they are now in stores
     let notification: string | null = null;
+    let buyLandData: { cx: number; cz: number; price: number } | null = null;
 
     onMount(() => {
         init();
@@ -170,6 +172,7 @@
         // Managers
         gameManager = new GameManager(scene);
         inputManager = new InputManager(camera, ground, scene);
+        inputManager.addInteractable(gameManager.signManager.signsGroup);
 
         // Inventory subscription removed
 
@@ -199,9 +202,9 @@
     }
 
     function prefillGrass() {
-        // Prefill with grass (100x100 grid)
-        for (let x = -50; x < 50; x++) {
-            for (let z = -50; z < 50; z++) {
+        // Prefill with grass (60x60 grid)
+        for (let x = -30; x < 30; x++) {
+            for (let z = -30; z < 30; z++) {
                 gameManager.gridManager.createTile(x + 0.5, z + 0.5, "grass");
             }
         }
@@ -246,8 +249,6 @@
         // Only allow interaction if clicking on the canvas (not HUD)
         if (event.target !== renderer.domElement) return;
 
-        if (selectedTool === "none") return;
-
         const intersect = inputManager.getIntersection(event);
 
         if (intersect) {
@@ -258,14 +259,29 @@
             const z = Math.floor(point.z) + 0.5;
 
             const result = gameManager.handleInput(selectedTool, x, z);
-            if (result && !result.success && result.message) {
-                notification = result.message;
+            if (result && !result.success) {
+                if (result.data && result.data.type === "buy_land") {
+                    buyLandData = result.data;
+                } else if (result.message) {
+                    notification = result.message;
+                }
             }
         }
     }
 
+    function confirmBuyLand() {
+        if (buyLandData) {
+            if (gameManager.unlockChunk(buyLandData.cx, buyLandData.cz)) {
+                notification = "Land Purchased!";
+            } else {
+                notification = "Not enough coins!";
+            }
+            buyLandData = null;
+        }
+    }
+
     function onPointerMove(event: MouseEvent) {
-        if (selectedTool === "none" || event.target !== renderer.domElement) {
+        if (event.target !== renderer.domElement) {
             inputManager.updateHoverIndicator(0, 0, false);
             return;
         }
@@ -342,6 +358,15 @@
     on:sell={handleSell}
     on:openTestScene={() => dispatch("openTestScene")}
 />
+
+{#if buyLandData}
+    <ConfirmationDialog
+        title="Expand Land"
+        message={`Buy this area for ${buyLandData.price} coins?`}
+        onConfirm={confirmBuyLand}
+        onCancel={() => (buyLandData = null)}
+    />
+{/if}
 
 <style>
     .game-container {

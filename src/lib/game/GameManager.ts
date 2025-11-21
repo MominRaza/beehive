@@ -4,7 +4,12 @@ import { CropManager } from './CropManager';
 import { TreeManager } from './TreeManager';
 import { InventoryManager } from './InventoryManager';
 import { StructureManager } from './StructureManager';
+import { SignManager } from './SignManager';
+import { FenceManager } from './FenceManager';
 import type { TileType, CropType, ToolType, InventoryItemType } from './types';
+
+const CHUNK_SIZE = 12;
+export const CHUNK_PRICE = 100;
 
 export class GameManager {
     private scene: THREE.Scene;
@@ -13,6 +18,9 @@ export class GameManager {
     public treeManager: TreeManager;
     public inventoryManager: InventoryManager;
     public structureManager: StructureManager;
+    public signManager: SignManager;
+    public fenceManager: FenceManager;
+    public unlockedChunks: Set<string> = new Set(["0,0"]);
 
     constructor(scene: THREE.Scene) {
         this.scene = scene;
@@ -21,10 +29,110 @@ export class GameManager {
         this.treeManager = new TreeManager(scene);
         this.inventoryManager = new InventoryManager();
         this.structureManager = new StructureManager(scene);
+        this.signManager = new SignManager(scene);
+        this.fenceManager = new FenceManager(scene);
+
+        this.updateBuyableSigns();
+        this.fenceManager.updateFences(this.unlockedChunks);
     }
 
-    handleInput(tool: ToolType, x: number, z: number): { success: boolean, message?: string } {
-        if (tool === "none") return { success: false };
+    getChunkCoords(x: number, z: number): { cx: number, cz: number } {
+        const cx = Math.floor((x + CHUNK_SIZE / 2) / CHUNK_SIZE);
+        const cz = Math.floor((z + CHUNK_SIZE / 2) / CHUNK_SIZE);
+        return { cx, cz };
+    }
+
+    isTileUnlocked(x: number, z: number): boolean {
+        const { cx, cz } = this.getChunkCoords(x, z);
+        return this.unlockedChunks.has(`${cx},${cz}`);
+    }
+
+    isValidChunk(cx: number, cz: number): boolean {
+        // World is 60x60, Chunk is 12x12
+        // Chunks range from -2 to 2
+        return cx >= -2 && cx <= 2 && cz >= -2 && cz <= 2;
+    }
+
+    unlockChunk(cx: number, cz: number): boolean {
+        if (!this.isValidChunk(cx, cz)) return false;
+
+        const key = `${cx},${cz}`;
+        if (this.unlockedChunks.has(key)) return false;
+
+        if (this.inventoryManager.removeItem("coins", CHUNK_PRICE)) {
+            this.unlockedChunks.add(key);
+            this.updateBuyableSigns();
+            this.fenceManager.updateFences(this.unlockedChunks);
+            return true;
+        }
+        return false;
+    }
+
+    private updateBuyableSigns() {
+        const buyableChunks: { cx: number, cz: number }[] = [];
+        const checked = new Set<string>();
+
+        this.unlockedChunks.forEach(key => {
+            const [cx, cz] = key.split(',').map(Number);
+            const neighbors = [
+                { cx: cx + 1, cz },
+                { cx: cx - 1, cz },
+                { cx: cx, cz: cz + 1 },
+                { cx: cx, cz: cz - 1 }
+            ];
+
+            neighbors.forEach(n => {
+                if (!this.isValidChunk(n.cx, n.cz)) return;
+
+                const nKey = `${n.cx},${n.cz}`;
+                if (!this.unlockedChunks.has(nKey) && !checked.has(nKey)) {
+                    buyableChunks.push(n);
+                    checked.add(nKey);
+                }
+            });
+        });
+
+        this.signManager.updateSigns(buyableChunks);
+    }
+
+    handleInput(tool: ToolType, x: number, z: number): { success: boolean, message?: string, data?: any } {
+        if (tool === "none") {
+            // Check for sign interaction
+            // Signs are at center of chunks: cx*12, cz*12
+            // We check if the click is close to any buyable chunk center
+            const { cx, cz } = this.getChunkCoords(x, z);
+            const chunkCenterX = cx * CHUNK_SIZE;
+            const chunkCenterZ = cz * CHUNK_SIZE;
+
+            // Check distance to center (allow 1.5 unit radius for easier clicking)
+            if (Math.abs(x - chunkCenterX) < 1.5 && Math.abs(z - chunkCenterZ) < 1.5) {
+                // Check if this chunk is buyable (locked but adjacent)
+                if (!this.unlockedChunks.has(`${cx},${cz}`)) {
+                    // Check if chunk is valid
+                    if (!this.isValidChunk(cx, cz)) return { success: false };
+
+                    const isAdjacent =
+                        this.unlockedChunks.has(`${cx + 1},${cz}`) ||
+                        this.unlockedChunks.has(`${cx - 1},${cz}`) ||
+                        this.unlockedChunks.has(`${cx},${cz + 1}`) ||
+                        this.unlockedChunks.has(`${cx},${cz - 1}`);
+
+                    if (isAdjacent) {
+                        return {
+                            success: false,
+                            message: "Buy Land?",
+                            data: { type: "buy_land", cx, cz, price: CHUNK_PRICE }
+                        };
+                    }
+                }
+            }
+            return { success: false };
+        }
+
+        // Check if tile is unlocked
+        if (!this.isTileUnlocked(x, z)) {
+            return { success: false, message: "Area Locked" };
+        }
 
         // Prevent interaction near the hut (0,0)
         if (Math.abs(x) < 1.5 && Math.abs(z) < 1.5) return { success: false };
@@ -103,7 +211,34 @@ export class GameManager {
     }
 
     getHoverState(tool: ToolType, x: number, z: number): { visible: boolean, color?: number, scaleY?: number, posY?: number } {
-        if (tool === "none") return { visible: false };
+        if (tool === "none") {
+            // Hover effect for signs
+            const { cx, cz } = this.getChunkCoords(x, z);
+            const chunkCenterX = cx * CHUNK_SIZE;
+            const chunkCenterZ = cz * CHUNK_SIZE;
+
+            if (Math.abs(x - chunkCenterX) < 1.5 && Math.abs(z - chunkCenterZ) < 1.5) {
+                if (!this.unlockedChunks.has(`${cx},${cz}`)) {
+                    // Check if chunk is valid
+                    if (!this.isValidChunk(cx, cz)) return { visible: false };
+
+                    const isAdjacent =
+                        this.unlockedChunks.has(`${cx + 1},${cz}`) ||
+                        this.unlockedChunks.has(`${cx - 1},${cz}`) ||
+                        this.unlockedChunks.has(`${cx},${cz + 1}`) ||
+                        this.unlockedChunks.has(`${cx},${cz - 1}`);
+
+                    if (isAdjacent) {
+                        return { visible: true, color: 0xffff00, scaleY: 1, posY: 0.5 }; // Yellow highlight for sign
+                    }
+                }
+            }
+            return { visible: false };
+        }
+
+        if (!this.isTileUnlocked(x, z)) {
+            return { visible: true, color: 0x333333, scaleY: 1, posY: 0.05 }; // Dark grey for locked
+        }
 
         // Prevent hover near hut
         if (Math.abs(x) < 1.5 && Math.abs(z) < 1.5) return { visible: false };
@@ -186,10 +321,11 @@ export class GameManager {
             growthStage: data.growthStage
         }));
         const inventoryData = this.inventoryManager.serialize();
-        return { tiles: tilesData, crops: cropsData, trees: treesData, inventory: inventoryData };
+        const unlockedChunks = Array.from(this.unlockedChunks);
+        return { tiles: tilesData, crops: cropsData, trees: treesData, inventory: inventoryData, unlockedChunks };
     }
 
-    load(data: { tiles: any[], crops: any[], trees?: any[], inventory?: any }) {
+    load(data: { tiles: any[], crops: any[], trees?: any[], inventory?: any, unlockedChunks?: string[] }) {
         this.clear(); // Clear current state
 
         // Re-create hut
@@ -198,6 +334,14 @@ export class GameManager {
         if (data.inventory) {
             this.inventoryManager.load(data.inventory);
         }
+
+        if (data.unlockedChunks) {
+            this.unlockedChunks = new Set(data.unlockedChunks);
+        } else {
+            this.unlockedChunks = new Set(["0,0"]);
+        }
+        this.updateBuyableSigns();
+        this.fenceManager.updateFences(this.unlockedChunks);
 
         data.tiles.forEach(tileData => {
             const [x, z] = tileData.key.split(',').map(Number);
@@ -238,6 +382,8 @@ export class GameManager {
         this.cropManager.dispose(); // Crops are individual meshes, so dispose is fine
         this.treeManager.dispose(); // Trees are individual meshes, so dispose is fine
         this.structureManager.dispose();
+        this.signManager.clear();
+        this.fenceManager.clear();
     }
 
     dispose() {
@@ -245,6 +391,8 @@ export class GameManager {
         this.cropManager.dispose();
         this.treeManager.dispose();
         this.structureManager.dispose();
+        this.signManager.dispose();
+        this.fenceManager.dispose();
     }
 }
 

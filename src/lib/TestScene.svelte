@@ -6,6 +6,8 @@
     import { StructureManager } from "./game/StructureManager";
     import { TreeManager } from "./game/TreeManager";
     import { GridManager } from "./game/GridManager";
+    import { SignManager } from "./game/SignManager";
+    import { FenceManager } from "./game/FenceManager";
     import type { CropType, TileType } from "./game/types";
 
     export let onBack: () => void;
@@ -22,6 +24,8 @@
     let structureManager: StructureManager;
     let treeManager: TreeManager;
     let gridManager: GridManager;
+    let signManager: SignManager | undefined = undefined;
+    let fenceManager: FenceManager | undefined = undefined;
 
     // State
     let selectedType: string = "house";
@@ -32,6 +36,8 @@
     const objectTypes = [
         { id: "house", name: "House" },
         { id: "tree", name: "Tree" },
+        { id: "sign", name: "Sign" },
+        { id: "fence", name: "Fence" },
         { id: "wheat", name: "Wheat" },
         { id: "carrot", name: "Carrot" },
         { id: "tomato", name: "Tomato" },
@@ -62,6 +68,8 @@
         if (cropManager) cropManager.dispose();
         if (structureManager) structureManager.dispose();
         if (treeManager) treeManager.dispose();
+        if (signManager) signManager.dispose();
+        if (fenceManager) fenceManager.dispose();
     });
 
     function init() {
@@ -115,6 +123,8 @@
         structureManager = new StructureManager(scene);
         treeManager = new TreeManager(scene);
         gridManager = new GridManager(scene);
+        signManager = new SignManager(scene);
+        fenceManager = new FenceManager(scene);
 
         // We need to hack the structure manager a bit because it creates the hut in constructor
         // We'll clear it immediately so we can control it via updateObject
@@ -127,6 +137,8 @@
         structureManager.dispose();
         treeManager.dispose();
         gridManager.dispose();
+        signManager?.dispose();
+        fenceManager?.dispose();
 
         // Re-init managers to clear internal state maps
         cropManager = new CropManager(scene);
@@ -136,6 +148,8 @@
 
         treeManager = new TreeManager(scene);
         gridManager = new GridManager(scene);
+        signManager = new SignManager(scene);
+        fenceManager = new FenceManager(scene);
     }
 
     function updateObject() {
@@ -168,6 +182,10 @@
                 data.growthStage = selectedStage;
                 treeManager.updateVisuals(data);
             }
+        } else if (selectedType === "sign") {
+            signManager?.createSingleSign(0, 0);
+        } else if (selectedType === "fence") {
+            fenceManager?.createSingleFence(0, 0);
         } else if (selectedType === "none") {
             // Do nothing
         } else {

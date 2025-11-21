@@ -7,6 +7,7 @@ export class InputManager {
     private ground: THREE.Mesh;
     private hoverIndicator: THREE.Mesh;
     private scene: THREE.Scene;
+    private interactables: THREE.Object3D[] = [];
 
     constructor(camera: THREE.Camera, ground: THREE.Mesh, scene: THREE.Scene) {
         this.camera = camera;
@@ -14,6 +15,7 @@ export class InputManager {
         this.scene = scene;
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
+        this.interactables = [ground];
 
         // Hover Indicator
         const indicatorGeometry = new THREE.BoxGeometry(1, 0.1, 1);
@@ -35,9 +37,13 @@ export class InputManager {
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
-        const intersects = this.raycaster.intersectObject(this.ground);
+        const intersects = this.raycaster.intersectObjects(this.interactables, true);
 
         return intersects.length > 0 ? intersects[0] : null;
+    }
+
+    addInteractable(object: THREE.Object3D) {
+        this.interactables.push(object);
     }
 
     updateHoverIndicator(x: number, z: number, visible: boolean, color?: number, scaleY?: number, posY?: number) {

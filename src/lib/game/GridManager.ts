@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { type TileType, TILE_DIMENSIONS } from './types';
 
-const GRID_SIZE = 100; // 100x100 grid
-const GRID_OFFSET = 50; // Center at 0,0
+const GRID_SIZE = 60; // 60x60 grid
+const GRID_OFFSET = 30; // Center at 0,0
 const MAX_INSTANCES = GRID_SIZE * GRID_SIZE;
 
 export class GridManager {
@@ -12,6 +12,7 @@ export class GridManager {
     private dirtMesh: THREE.InstancedMesh;
     private grassMesh: THREE.InstancedMesh;
     private pathMesh: THREE.InstancedMesh;
+    private chunkLines: THREE.LineSegments;
 
     private dummy = new THREE.Object3D();
 
@@ -49,12 +50,60 @@ export class GridManager {
         this.scene.add(this.grassMesh);
         this.scene.add(this.pathMesh);
 
+        this.createChunkLines();
+
         // Initialize all to hidden
         for (let i = 0; i < MAX_INSTANCES; i++) {
             this.hideInstance(this.dirtMesh, i);
             this.hideInstance(this.grassMesh, i);
             this.hideInstance(this.pathMesh, i);
         }
+    }
+
+    private createChunkLines() {
+        const chunkSize = 12;
+        const extent = 30; // 60x60 grid, so -30 to 30
+
+        const vertices: number[] = [];
+
+        // Vertical lines (along Z)
+        // Start from center (0,0) which is middle of chunk 0,0.
+        // Chunk 0,0 spans -6 to 6.
+        // So lines are at +/- 6, +/- 18, +/- 30, +/- 42
+        for (let x = -6; x < extent; x += chunkSize) {
+            vertices.push(x, 0.2, -extent);
+            vertices.push(x, 0.2, extent);
+            if (x !== -6) { // Mirror for negative side, avoid double counting if we started at 0
+                vertices.push(-x, 0.2, -extent);
+                vertices.push(-x, 0.2, extent);
+            }
+        }
+        // Fix loop logic:
+        // We want lines at 6, 18, 30, 42.
+        // And -6, -18, -30, -42.
+
+        const lines = [];
+        for (let i = 6; i < extent; i += chunkSize) {
+            lines.push(i);
+            lines.push(-i);
+        }
+
+        lines.forEach(pos => {
+            // Line along Z at x=pos
+            vertices.push(pos, 0.2, -extent);
+            vertices.push(pos, 0.2, extent);
+
+            // Line along X at z=pos
+            vertices.push(-extent, 0.2, pos);
+            vertices.push(extent, 0.2, pos);
+        });
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        const material = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.3, transparent: true });
+
+        this.chunkLines = new THREE.LineSegments(geometry, material);
+        this.scene.add(this.chunkLines);
     }
 
     private getIndex(x: number, z: number): number {
@@ -133,10 +182,13 @@ export class GridManager {
         this.scene.remove(this.dirtMesh);
         this.scene.remove(this.grassMesh);
         this.scene.remove(this.pathMesh);
+        this.scene.remove(this.chunkLines);
 
         this.dirtMesh.dispose();
         this.grassMesh.dispose();
         this.pathMesh.dispose();
+        this.chunkLines.geometry.dispose();
+        (this.chunkLines.material as THREE.Material).dispose();
 
         this.tiles.clear();
     }
