@@ -140,7 +140,7 @@ Start the development server:
 bun run dev
 ```
 
-Open your browser and navigate to the local URL provided (usually `http://localhost:5173`).
+Open your browser and navigate to the local URL provided (`http://localhost:5173/beehive/`).
 
 ## 🕹️ Controls
 
