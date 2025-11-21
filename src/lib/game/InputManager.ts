@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { HoverState } from './tools/Tool';
 
 export class InputManager {
     private raycaster: THREE.Raycaster;
@@ -46,24 +47,24 @@ export class InputManager {
         this.interactables.push(object);
     }
 
-    updateHoverIndicator(x: number, z: number, visible: boolean, color?: number, scale?: number | THREE.Vector3, posY?: number, rotation?: THREE.Euler) {
-        this.hoverIndicator.visible = visible;
-        if (visible) {
-            this.hoverIndicator.position.set(x, posY || 0.05, z);
-            if (color !== undefined) {
-                (this.hoverIndicator.material as THREE.MeshBasicMaterial).color.setHex(color);
+    updateHoverIndicator(state: HoverState) {
+        this.hoverIndicator.visible = state.visible;
+        if (state.visible) {
+            this.hoverIndicator.position.set(state.x || 0, state.posY || 0.05, state.z || 0);
+            if (state.color !== undefined) {
+                (this.hoverIndicator.material as THREE.MeshBasicMaterial).color.setHex(state.color);
             }
 
-            if (scale instanceof THREE.Vector3) {
-                this.hoverIndicator.scale.copy(scale);
-            } else if (typeof scale === 'number') {
-                this.hoverIndicator.scale.set(1, scale, 1);
+            if (state.scale instanceof THREE.Vector3) {
+                this.hoverIndicator.scale.copy(state.scale);
+            } else if (typeof state.scale === 'number') {
+                this.hoverIndicator.scale.set(1, state.scale, 1);
             } else {
                 this.hoverIndicator.scale.set(1, 1, 1);
             }
 
-            if (rotation) {
-                this.hoverIndicator.rotation.copy(rotation);
+            if (state.rotation) {
+                this.hoverIndicator.rotation.copy(state.rotation);
             } else {
                 this.hoverIndicator.rotation.set(0, 0, 0);
             }

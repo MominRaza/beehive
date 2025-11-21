@@ -22,33 +22,17 @@ export class GridManager {
         // Dirt
         const dirtGeo = new THREE.BoxGeometry(1, TILE_DIMENSIONS.DIRT_HEIGHT, 1);
         const dirtMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-        this.dirtMesh = new THREE.InstancedMesh(dirtGeo, dirtMat, MAX_INSTANCES);
-        this.dirtMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        this.dirtMesh.castShadow = true;
-        this.dirtMesh.receiveShadow = true;
-        this.dirtMesh.frustumCulled = false;
+        this.dirtMesh = this.createMesh(dirtGeo, dirtMat);
 
         // Grass
         const grassGeo = new THREE.BoxGeometry(1, TILE_DIMENSIONS.GRASS_LAYER_HEIGHT, 1);
         const grassMat = new THREE.MeshStandardMaterial({ color: 0x228b22 });
-        this.grassMesh = new THREE.InstancedMesh(grassGeo, grassMat, MAX_INSTANCES);
-        this.grassMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        this.grassMesh.castShadow = true;
-        this.grassMesh.receiveShadow = true;
-        this.grassMesh.frustumCulled = false;
+        this.grassMesh = this.createMesh(grassGeo, grassMat);
 
         // Path
         const pathGeo = new THREE.BoxGeometry(1, TILE_DIMENSIONS.PATH_LAYER_HEIGHT, 1);
         const pathMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
-        this.pathMesh = new THREE.InstancedMesh(pathGeo, pathMat, MAX_INSTANCES);
-        this.pathMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        this.pathMesh.castShadow = true;
-        this.pathMesh.receiveShadow = true;
-        this.pathMesh.frustumCulled = false;
-
-        this.scene.add(this.dirtMesh);
-        this.scene.add(this.grassMesh);
-        this.scene.add(this.pathMesh);
+        this.pathMesh = this.createMesh(pathGeo, pathMat);
 
         this.createChunkLines();
 
@@ -58,6 +42,16 @@ export class GridManager {
             this.hideInstance(this.grassMesh, i);
             this.hideInstance(this.pathMesh, i);
         }
+    }
+
+    private createMesh(geometry: THREE.BufferGeometry, material: THREE.Material): THREE.InstancedMesh {
+        const mesh = new THREE.InstancedMesh(geometry, material, MAX_INSTANCES);
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.frustumCulled = false;
+        this.scene.add(mesh);
+        return mesh;
     }
 
     private createChunkLines() {
@@ -120,36 +114,33 @@ export class GridManager {
 
         this.tiles.set(key, { type, isWatered: false });
 
+        // Helper to set matrix
+        const setMatrix = (mesh: THREE.InstancedMesh, y: number) => {
+            this.dummy.scale.set(1, 1, 1);
+            this.dummy.position.set(x, y, z);
+            this.dummy.updateMatrix();
+            mesh.setMatrixAt(index, this.dummy.matrix);
+            mesh.instanceMatrix.needsUpdate = true;
+        };
+
         // 1. Dirt (Always present)
-        this.dummy.scale.set(1, 1, 1);
-        this.dummy.position.set(x, TILE_DIMENSIONS.DIRT_HEIGHT / 2, z);
-        this.dummy.updateMatrix();
-        this.dirtMesh.setMatrixAt(index, this.dummy.matrix);
+        setMatrix(this.dirtMesh, TILE_DIMENSIONS.DIRT_HEIGHT / 2);
         this.dirtMesh.setColorAt(index, new THREE.Color(0x8b4513)); // Reset color
-        this.dirtMesh.instanceMatrix.needsUpdate = true;
         if (this.dirtMesh.instanceColor) this.dirtMesh.instanceColor.needsUpdate = true;
 
         // 2. Grass
         if (type === "grass" || type === "path") {
-            this.dummy.scale.set(1, 1, 1);
-            this.dummy.position.set(x, TILE_DIMENSIONS.DIRT_HEIGHT + TILE_DIMENSIONS.GRASS_LAYER_HEIGHT / 2, z);
-            this.dummy.updateMatrix();
-            this.grassMesh.setMatrixAt(index, this.dummy.matrix);
+            setMatrix(this.grassMesh, TILE_DIMENSIONS.DIRT_HEIGHT + TILE_DIMENSIONS.GRASS_LAYER_HEIGHT / 2);
         } else {
             this.hideInstance(this.grassMesh, index);
         }
-        this.grassMesh.instanceMatrix.needsUpdate = true;
 
         // 3. Path
         if (type === "path") {
-            this.dummy.scale.set(1, 1, 1);
-            this.dummy.position.set(x, TILE_DIMENSIONS.DIRT_HEIGHT + TILE_DIMENSIONS.GRASS_LAYER_HEIGHT + TILE_DIMENSIONS.PATH_LAYER_HEIGHT / 2, z);
-            this.dummy.updateMatrix();
-            this.pathMesh.setMatrixAt(index, this.dummy.matrix);
+            setMatrix(this.pathMesh, TILE_DIMENSIONS.DIRT_HEIGHT + TILE_DIMENSIONS.GRASS_LAYER_HEIGHT + TILE_DIMENSIONS.PATH_LAYER_HEIGHT / 2);
         } else {
             this.hideInstance(this.pathMesh, index);
         }
-        this.pathMesh.instanceMatrix.needsUpdate = true;
     }
 
     waterTile(x: number, z: number) {

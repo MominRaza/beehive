@@ -173,6 +173,7 @@
         gameManager = new GameManager(scene);
         inputManager = new InputManager(camera, ground, scene);
         inputManager.addInteractable(gameManager.signManager.signsGroup);
+        inputManager.addInteractable(gameManager.fenceManager.fencesGroup);
 
         // Inventory subscription removed
 
@@ -287,7 +288,7 @@
 
     function onPointerMove(event: MouseEvent) {
         if (event.target !== renderer.domElement) {
-            inputManager.updateHoverIndicator(0, 0, false);
+            inputManager.updateHoverIndicator({ visible: false });
             return;
         }
 
@@ -306,17 +307,9 @@
                 z,
                 intersect.object,
             );
-            inputManager.updateHoverIndicator(
-                hoverState.x !== undefined ? hoverState.x : x,
-                hoverState.z !== undefined ? hoverState.z : z,
-                hoverState.visible,
-                hoverState.color,
-                hoverState.scale,
-                hoverState.posY,
-                hoverState.rotation,
-            );
+            inputManager.updateHoverIndicator(hoverState);
         } else {
-            inputManager.updateHoverIndicator(0, 0, false);
+            inputManager.updateHoverIndicator({ visible: false });
         }
     }
 

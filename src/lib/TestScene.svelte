@@ -39,7 +39,8 @@
 
     const objectTypes = [
         { id: "house", name: "House" },
-        { id: "tree", name: "Tree" },
+        { id: "oak", name: "Oak Tree" },
+        { id: "pine", name: "Pine Tree" },
         { id: "sign", name: "Sign" },
         { id: "fence", name: "Fence" },
         { id: "wheat", name: "Wheat" },
@@ -183,14 +184,14 @@
             // Let's make a new one.
             structureManager = new StructureManager(scene);
             // It creates at 0,0 by default
-        } else if (selectedType === "tree") {
-            treeManager.createTree(0, 0);
+        } else if (selectedType === "oak" || selectedType === "pine") {
+            treeManager.createTree(0, 0, selectedType as any);
             // Force stage
             const key = "0,0";
-            const data = treeManager.trees.get(key);
-            if (data && selectedStage > 0) {
-                data.growthStage = selectedStage;
-                treeManager.updateVisuals(data);
+            const tree = treeManager.trees.get(key);
+            if (tree && selectedStage > 0) {
+                tree.growthStage = selectedStage;
+                treeManager.updateVisuals(tree);
             }
         } else if (selectedType === "sign") {
             signManager?.createSingleSign(0, 0);
@@ -226,10 +227,10 @@
             // Crops
             cropManager.createCrop(0, 0, selectedType as CropType);
             const key = "0,0";
-            const data = cropManager.crops.get(key);
-            if (data && selectedStage > 0) {
-                data.growthStage = selectedStage;
-                cropManager.updateVisuals(data);
+            const crop = cropManager.crops.get(key);
+            if (crop && selectedStage > 0) {
+                crop.growthStage = selectedStage;
+                cropManager.updateVisuals(crop);
             }
         }
     }

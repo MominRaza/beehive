@@ -41,7 +41,8 @@
                                         {#if item.includes("wheat")}🌾
                                         {:else if item.includes("carrot")}🥕
                                         {:else if item.includes("tomato")}🍅
-                                        {:else if item.includes("tree")}🌲
+                                        {:else if item.includes("oak")}🌳
+                                        {:else if item.includes("pine")}🌲
                                         {/if}
                                     </div>
                                     <div class="card-info">

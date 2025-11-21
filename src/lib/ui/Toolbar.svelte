@@ -33,11 +33,18 @@
             item: "tomato_seed",
         },
         {
-            id: "tree",
-            label: "Tree",
+            id: "oak",
+            label: "Oak",
+            icon: "🌳",
+            group: "seeds",
+            item: "oak_sapling",
+        },
+        {
+            id: "pine",
+            label: "Pine",
             icon: "🌲",
             group: "seeds",
-            item: "tree_sapling",
+            item: "pine_sapling",
         },
 
         { id: "water", label: "Water", icon: "💧", group: "basic" },
@@ -83,7 +90,8 @@
                                 <div class="btn-content">
                                     <span>{tool.icon}</span>
                                     <span class="badge"
-                                        >{$inventory[tool.item || ""] || 0}</span
+                                        >{$inventory[tool.item || ""] ||
+                                            0}</span
                                     >
                                 </div>
                             </GameButton>

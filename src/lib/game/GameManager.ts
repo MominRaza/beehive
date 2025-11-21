@@ -6,7 +6,12 @@ import { InventoryManager } from './InventoryManager';
 import { StructureManager } from './StructureManager';
 import { SignManager } from './SignManager';
 import { FenceManager } from './FenceManager';
-import type { TileType, CropType, ToolType, InventoryItemType } from './types';
+import type { TileType, CropType, ToolType, InventoryItemType, TreeType } from './types';
+import { Tool, type HoverState } from './tools/Tool';
+import { TerraformTool } from './tools/TerraformTool';
+import { PlantTool } from './tools/PlantTool';
+import { ActionTool } from './tools/ActionTool';
+import { CursorTool } from './tools/CursorTool';
 
 const CHUNK_SIZE = 12;
 export const CHUNK_PRICE = 100;
@@ -22,6 +27,8 @@ export class GameManager {
     public fenceManager: FenceManager;
     public unlockedChunks: Set<string> = new Set(["0,0"]);
 
+    private tools: Map<string, Tool> = new Map();
+
     constructor(scene: THREE.Scene) {
         this.scene = scene;
         this.gridManager = new GridManager(scene);
@@ -32,8 +39,29 @@ export class GameManager {
         this.signManager = new SignManager(scene);
         this.fenceManager = new FenceManager(scene);
 
+        this.initializeTools();
+
         this.updateBuyableSigns();
         this.fenceManager.updateFences(this.unlockedChunks);
+    }
+
+    private initializeTools() {
+        this.tools.set("none", new CursorTool(this));
+
+        this.tools.set("dirt", new TerraformTool(this, "dirt"));
+        this.tools.set("grass", new TerraformTool(this, "grass"));
+        this.tools.set("path", new TerraformTool(this, "path"));
+
+        this.tools.set("wheat", new PlantTool(this, "wheat", false));
+        this.tools.set("carrot", new PlantTool(this, "carrot", false));
+        this.tools.set("tomato", new PlantTool(this, "tomato", false));
+
+        this.tools.set("oak", new PlantTool(this, "oak", true));
+        this.tools.set("pine", new PlantTool(this, "pine", true));
+
+        this.tools.set("water", new ActionTool(this, "water"));
+        this.tools.set("harvest", new ActionTool(this, "harvest"));
+        this.tools.set("axe", new ActionTool(this, "axe"));
     }
 
     getChunkCoords(x: number, z: number): { cx: number, cz: number } {
@@ -95,241 +123,20 @@ export class GameManager {
         this.signManager.updateSigns(buyableChunks);
     }
 
-    private isSignObject(object?: THREE.Object3D): boolean {
-        if (!object) return false;
-        let obj: THREE.Object3D | null = object;
-        while (obj) {
-            if (obj.userData && obj.userData.isSign) {
-                return true;
-            }
-            obj = obj.parent;
-        }
-        return false;
-    }
-
     handleInput(tool: ToolType, x: number, z: number, intersectedObject?: THREE.Object3D): { success: boolean, message?: string, data?: any } {
-        if (tool === "none") {
-            // Check for sign interaction
-            if (!this.isSignObject(intersectedObject)) return { success: false };
-
-            // Signs are at center of chunks: cx*12, cz*12
-            // We check if the click is close to any buyable chunk center
-            const { cx, cz } = this.getChunkCoords(x, z);
-            const chunkCenterX = cx * CHUNK_SIZE;
-            const chunkCenterZ = cz * CHUNK_SIZE;
-
-            // Check distance to center (allow 1.5 unit radius for easier clicking)
-            if (Math.abs(x - chunkCenterX) < 1.5 && Math.abs(z - chunkCenterZ) < 1.5) {
-                // Check if this chunk is buyable (locked but adjacent)
-                if (!this.unlockedChunks.has(`${cx},${cz}`)) {
-                    // Check if chunk is valid
-                    if (!this.isValidChunk(cx, cz)) return { success: false };
-
-                    const isAdjacent =
-                        this.unlockedChunks.has(`${cx + 1},${cz}`) ||
-                        this.unlockedChunks.has(`${cx - 1},${cz}`) ||
-                        this.unlockedChunks.has(`${cx},${cz + 1}`) ||
-                        this.unlockedChunks.has(`${cx},${cz - 1}`);
-
-                    if (isAdjacent) {
-                        return {
-                            success: false,
-                            message: "Buy Land?",
-                            data: { type: "buy_land", cx, cz, price: CHUNK_PRICE }
-                        };
-                    }
-                }
-            }
-            return { success: false };
-        }
-
-        // Check if tile is unlocked
-        if (!this.isTileUnlocked(x, z)) {
-            return { success: false, message: "Area Locked" };
-        }
-
-        // Prevent interaction near the hut (0,0)
-        if (Math.abs(x) < 1.5 && Math.abs(z) < 1.5) return { success: false };
-
-        if (tool === "wheat" || tool === "carrot" || tool === "tomato") {
-            const tileType = this.gridManager.getTileType(x, z);
-            if (tileType === "dirt") {
-                const seedType = `${tool}_seed` as InventoryItemType;
-                if (this.inventoryManager.removeItem(seedType, 1)) {
-                    this.cropManager.createCrop(x, z, tool);
-                    return { success: true };
-                } else {
-                    return { success: false, message: "Not enough seeds!" };
-                }
-            }
-        } else if (tool === "water") {
-            const tileType = this.gridManager.getTileType(x, z);
-            if (tileType === "dirt") {
-                this.gridManager.waterTile(x, z);
-                return { success: true };
-            }
-        } else if (tool === "harvest") {
-            // Check if inventory is full before harvesting
-            if (this.inventoryManager.getProduceCount() >= this.inventoryManager.getMaxCapacity()) {
-                return { success: false, message: "Inventory Full!" };
-            }
-
-            // Try harvesting crop
-            const harvestedCrop = this.cropManager.harvest(x, z);
-            if (harvestedCrop) {
-                const produceType = `${harvestedCrop}_produce` as InventoryItemType;
-                if (this.inventoryManager.addItem(produceType, 1)) {
-                    // No longer giving seeds back automatically
-                    return { success: true };
-                } else {
-                    // Should not happen if we checked capacity, but just in case
-                    return { success: false, message: "Inventory Full! (Unexpected)" };
-                }
-            }
-        } else if (tool === "axe") {
-            // Check if inventory is full before harvesting
-            // Wood adds 2 items, so check if we have space for 2
-            if (this.inventoryManager.getProduceCount() + 2 > this.inventoryManager.getMaxCapacity()) {
-                return { success: false, message: "Inventory Full!" };
-            }
-
-            // Try harvesting tree
-            if (this.treeManager.harvest(x, z)) {
-                if (this.inventoryManager.addItem("wood", 2)) {
-                    return { success: true };
-                } else {
-                    return { success: false, message: "Inventory Full! (Unexpected)" };
-                }
-            }
-        } else if (tool === "tree") {
-            const tileType = this.gridManager.getTileType(x, z);
-            if (tileType === "grass") {
-                if (this.inventoryManager.removeItem("tree_sapling", 1)) {
-                    this.treeManager.createTree(x, z);
-                    return { success: true };
-                } else {
-                    return { success: false, message: "Not enough saplings!" };
-                }
-            }
-        } else if (tool === "dirt" || tool === "grass" || tool === "path") {
-            // Check if tile is occupied
-            const key = `${x},${z}`;
-            if (this.cropManager.crops.has(key) || this.treeManager.trees.has(key)) {
-                return { success: false, message: "Tile is occupied!" };
-            }
-
-            this.gridManager.createTile(x, z, tool);
-            return { success: true };
+        const toolInstance = this.tools.get(tool);
+        if (toolInstance) {
+            return toolInstance.use(x, z, intersectedObject);
         }
         return { success: false };
     }
 
-    getHoverState(tool: ToolType, x: number, z: number, intersectedObject?: THREE.Object3D): { visible: boolean, color?: number, scale?: number | THREE.Vector3, posY?: number, rotation?: THREE.Euler, x?: number, z?: number } {
-        if (tool === "none") {
-            // Hover effect for signs
-            if (!this.isSignObject(intersectedObject)) return { visible: false };
-
-            const { cx, cz } = this.getChunkCoords(x, z);
-            const chunkCenterX = cx * CHUNK_SIZE;
-            const chunkCenterZ = cz * CHUNK_SIZE;
-
-            if (!this.unlockedChunks.has(`${cx},${cz}`)) {
-                // Check if chunk is valid
-                if (!this.isValidChunk(cx, cz)) return { visible: false };
-
-                const isAdjacent =
-                    this.unlockedChunks.has(`${cx + 1},${cz}`) ||
-                    this.unlockedChunks.has(`${cx - 1},${cz}`) ||
-                    this.unlockedChunks.has(`${cx},${cz + 1}`) ||
-                    this.unlockedChunks.has(`${cx},${cz - 1}`);
-
-                if (isAdjacent) {
-                    // Highlight the board
-                    // Board is at y=1, z offset 0.06
-                    // Board dims: 1 x 0.6 x 0.1
-                    // Indicator base: 1 x 0.1 x 1
-                    // Rotate X 90: Local Z (1) -> World Y. Local Y (0.1) -> World Z.
-                    // We want World Y = 0.7 -> Scale Z = 0.7
-                    // We want World Z = 0.2 (slightly thicker) -> Scale Y = 2.0
-                    // We want World X = 1.1 (slightly wider) -> Scale X = 1.1
-                    const scale = new THREE.Vector3(1.1, 2.0, 0.7);
-                    const rotation = new THREE.Euler(Math.PI / 2, 0, 0);
-                    return {
-                        visible: true,
-                        color: 0xffff00,
-                        scale,
-                        posY: 1,
-                        rotation,
-                        x: chunkCenterX,
-                        z: chunkCenterZ + 0.06
-                    };
-                }
-            }
-            return { visible: false };
+    getHoverState(tool: ToolType, x: number, z: number, intersectedObject?: THREE.Object3D): HoverState {
+        const toolInstance = this.tools.get(tool);
+        if (toolInstance) {
+            return toolInstance.getHoverState(x, z, intersectedObject);
         }
-
-        if (!this.isTileUnlocked(x, z)) {
-            return { visible: true, color: 0x333333, scale: 1, posY: 0.05 }; // Dark grey for locked
-        }
-
-        // Prevent hover near hut
-        if (Math.abs(x) < 1.5 && Math.abs(z) < 1.5) return { visible: false };
-
-        const tileType = this.gridManager.getTileType(x, z);
-
-        if (tool === "tree") {
-            if (tileType === "grass") {
-                return { visible: true, color: 0x228b22, scale: 0.5, posY: 0.35 }; // Forest Green
-            }
-            return { visible: false };
-        }
-
-        if (tool === "axe") {
-            // Check if there is a tree?
-            // For now just show red indicator on grass/anywhere?
-            // Ideally we check if tree exists.
-            // But GridManager doesn't know about trees. TreeManager does.
-            // I can't easily check here without exposing TreeManager state more.
-            // Let's just show a red indicator.
-            return { visible: true, color: 0xff0000, scale: 1.1, posY: 0.05 };
-        }
-
-        if (tool === "wheat" || tool === "carrot" || tool === "tomato" || tool === "water" || tool === "harvest") {
-            if (tileType === "dirt") {
-                if (tool === "water") {
-                    return { visible: true, color: 0x0000ff, scale: 1.1, posY: 0.05 }; // Blue
-                } else if (tool === "harvest") {
-                    return { visible: true, color: 0x800080, scale: 1.1, posY: 0.05 }; // Purple
-                } else {
-                    let color = 0xffff00; // Wheat
-                    if (tool === "carrot") color = 0xffa500;
-                    if (tool === "tomato") color = 0xff6347;
-                    return { visible: true, color, scale: 0.5, posY: 0.35 };
-                }
-            }
-            return { visible: false };
-        }
-
-        // Tile placement tools
-        let color = 0xffffff;
-        let scale = 1;
-        let posY = 0.05;
-
-        if (tool === "dirt") {
-            color = 0x8b4513;
-            scale = 1;
-            posY = 0.05;
-        } else if (tool === "grass") {
-            color = 0x228b22;
-            scale = 3;
-            posY = 0.15;
-        } else if (tool === "path") {
-            color = 0x808080;
-            scale = 4;
-            posY = 0.2;
-        }
-
-        return { visible: true, color, scale, posY };
+        return { visible: false };
     }
 
     update(deltaTime: number) {
@@ -343,14 +150,15 @@ export class GameManager {
             type: data.type,
             isWatered: data.isWatered
         }));
-        const cropsData = Array.from(this.cropManager.crops.entries()).map(([key, data]) => ({
+        const cropsData = Array.from(this.cropManager.crops.entries()).map(([key, crop]) => ({
             key,
-            type: data.type,
-            growthStage: data.growthStage
+            type: crop.type,
+            growthStage: crop.growthStage
         }));
-        const treesData = Array.from(this.treeManager.trees.entries()).map(([key, data]) => ({
+        const treesData = Array.from(this.treeManager.trees.entries()).map(([key, tree]) => ({
             key,
-            growthStage: data.growthStage
+            type: tree.type,
+            growthStage: tree.growthStage
         }));
         const inventoryData = this.inventoryManager.serialize();
         const unlockedChunks = Array.from(this.unlockedChunks);
@@ -398,7 +206,7 @@ export class GameManager {
         if (data.trees) {
             data.trees.forEach(treeData => {
                 const [x, z] = treeData.key.split(',').map(Number);
-                this.treeManager.createTree(x, z);
+                this.treeManager.createTree(x, z, treeData.type || "oak");
 
                 const tree = this.treeManager.trees.get(treeData.key);
                 if (tree && treeData.growthStage > 0) {
