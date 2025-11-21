@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { SURFACE_HEIGHTS } from './types';
 
 export class FenceManager {
@@ -14,10 +15,43 @@ export class FenceManager {
         this.scene.add(this.fencesGroup);
 
         // Create InstancedMesh for fences
-        // A simple post and rail fence
-        // We'll just use a simple box for now to represent a fence segment
-        // Segment length = 1 (tile width), height = 0.5, width = 0.1
-        const geometry = new THREE.BoxGeometry(1, 0.5, 0.1);
+        // A post and rail fence: 2 posts at the edges, 2 rails
+        // This ensures corners and adjacent fences connect seamlessly
+        const geometries: THREE.BufferGeometry[] = [];
+
+        // Posts: Taller and thicker
+        const postGeo = new THREE.BoxGeometry(0.2, 1.1, 0.2);
+
+        // Rails: Spanning the full width
+        const railGeo = new THREE.BoxGeometry(1.0, 0.12, 0.08);
+
+        // Post 1 (Left Edge) - Centered at -0.5
+        const post1 = postGeo.clone();
+        post1.translate(-0.5, 0.55, 0); // y=0.55 so it sits on ground
+        geometries.push(post1);
+
+        // Post 2 (Right Edge) - Centered at 0.5
+        const post2 = postGeo.clone();
+        post2.translate(0.5, 0.55, 0);
+        geometries.push(post2);
+
+        // Rail 1 (Top)
+        const rail1 = railGeo.clone();
+        rail1.translate(0, 0.85, 0);
+        geometries.push(rail1);
+
+        // Rail 2 (Bottom)
+        const rail2 = railGeo.clone();
+        rail2.translate(0, 0.45, 0);
+        geometries.push(rail2);
+
+        const geometry = BufferGeometryUtils.mergeGeometries(geometries);
+
+        // Cleanup intermediate geometries
+        postGeo.dispose();
+        railGeo.dispose();
+        geometries.forEach(g => g.dispose());
+
         const material = new THREE.MeshStandardMaterial({ color: 0x8b4513 }); // Brown
         this.fenceMesh = new THREE.InstancedMesh(geometry, material, this.MAX_FENCES);
         this.fenceMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -91,7 +125,7 @@ export class FenceManager {
     }
 
     public createSingleFence(x: number, z: number, rotationY: number = 0) {
-        this.dummy.position.set(x, SURFACE_HEIGHTS.GRASS + 0.25, z);
+        this.dummy.position.set(x, SURFACE_HEIGHTS.DIRT, z);
         this.dummy.rotation.set(0, rotationY, 0);
         this.dummy.scale.set(1, 1, 1);
         this.dummy.updateMatrix();
@@ -107,7 +141,7 @@ export class FenceManager {
     private placeFence(x: number, z: number, rotationY: number, index: number) {
         if (index >= this.MAX_FENCES) return;
 
-        this.dummy.position.set(x, SURFACE_HEIGHTS.GRASS + 0.25, z);
+        this.dummy.position.set(x, SURFACE_HEIGHTS.DIRT, z);
         this.dummy.rotation.set(0, rotationY, 0);
 
         // If rotation is 0 (along Z axis), we need to rotate the box geometry which is along X by default?

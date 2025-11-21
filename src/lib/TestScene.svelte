@@ -32,6 +32,10 @@
     let selectedTile: string = "grass";
     let selectedGridSize: number = 2;
     let selectedStage: number = 2; // Default to fully grown/complete
+    let showHighlights: boolean = false;
+    let highlightMesh: THREE.Mesh | undefined;
+
+    const supportedHighlightTypes = ["sign"];
 
     const objectTypes = [
         { id: "house", name: "House" },
@@ -156,6 +160,12 @@
         if (!scene) return;
 
         clearScene();
+        if (highlightMesh) {
+            scene.remove(highlightMesh);
+            highlightMesh.geometry.dispose();
+            (highlightMesh.material as THREE.Material).dispose();
+            highlightMesh = undefined;
+        }
 
         // Create selected tile (grid)
         if (selectedTile !== "none") {
@@ -184,6 +194,30 @@
             }
         } else if (selectedType === "sign") {
             signManager?.createSingleSign(0, 0);
+            if (showHighlights) {
+                const geometry = new THREE.BoxGeometry(1, 0.1, 1);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0xffff00,
+                    transparent: true,
+                    opacity: 0.5,
+                    depthTest: false,
+                    depthWrite: false,
+                });
+                highlightMesh = new THREE.Mesh(geometry, material);
+
+                // Match GameManager logic
+                // Board dims: 1 x 0.6 x 0.1
+                // Indicator base: 1 x 0.1 x 1
+                // Rotate X 90: Local Z (1) -> World Y. Local Y (0.1) -> World Z.
+                // We want World Y = 0.7 -> Scale Z = 0.7
+                // We want World Z = 0.2 -> Scale Y = 2.0
+                // We want World X = 1.1 -> Scale X = 1.1
+                highlightMesh.scale.set(1.1, 2.0, 0.7);
+                highlightMesh.rotation.set(Math.PI / 2, 0, 0);
+                highlightMesh.position.set(0, 1, 0.06);
+
+                scene.add(highlightMesh);
+            }
         } else if (selectedType === "fence") {
             fenceManager?.createSingleFence(0, 0);
         } else if (selectedType === "none") {
@@ -260,6 +294,19 @@
                 {/each}
             </select>
         </div>
+
+        {#if supportedHighlightTypes.includes(selectedType)}
+            <div class="control-group">
+                <label>
+                    <input
+                        type="checkbox"
+                        bind:checked={showHighlights}
+                        on:change={updateObject}
+                    />
+                    Show Highlights
+                </label>
+            </div>
+        {/if}
 
         {#if selectedType !== "house" && selectedType !== "none"}
             <div class="control-group">

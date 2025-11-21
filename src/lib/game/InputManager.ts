@@ -46,15 +46,26 @@ export class InputManager {
         this.interactables.push(object);
     }
 
-    updateHoverIndicator(x: number, z: number, visible: boolean, color?: number, scaleY?: number, posY?: number) {
+    updateHoverIndicator(x: number, z: number, visible: boolean, color?: number, scale?: number | THREE.Vector3, posY?: number, rotation?: THREE.Euler) {
         this.hoverIndicator.visible = visible;
         if (visible) {
             this.hoverIndicator.position.set(x, posY || 0.05, z);
             if (color !== undefined) {
                 (this.hoverIndicator.material as THREE.MeshBasicMaterial).color.setHex(color);
             }
-            if (scaleY !== undefined) {
-                this.hoverIndicator.scale.y = scaleY;
+
+            if (scale instanceof THREE.Vector3) {
+                this.hoverIndicator.scale.copy(scale);
+            } else if (typeof scale === 'number') {
+                this.hoverIndicator.scale.set(1, scale, 1);
+            } else {
+                this.hoverIndicator.scale.set(1, 1, 1);
+            }
+
+            if (rotation) {
+                this.hoverIndicator.rotation.copy(rotation);
+            } else {
+                this.hoverIndicator.rotation.set(0, 0, 0);
             }
         }
     }

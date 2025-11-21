@@ -12,7 +12,7 @@ export class GridManager {
     private dirtMesh: THREE.InstancedMesh;
     private grassMesh: THREE.InstancedMesh;
     private pathMesh: THREE.InstancedMesh;
-    private chunkLines: THREE.LineSegments;
+    private chunkLines!: THREE.LineSegments;
 
     private dummy = new THREE.Object3D();
 

@@ -258,7 +258,12 @@
             const x = Math.floor(point.x) + 0.5;
             const z = Math.floor(point.z) + 0.5;
 
-            const result = gameManager.handleInput(selectedTool, x, z);
+            const result = gameManager.handleInput(
+                selectedTool,
+                x,
+                z,
+                intersect.object,
+            );
             if (result && !result.success) {
                 if (result.data && result.data.type === "buy_land") {
                     buyLandData = result.data;
@@ -295,14 +300,20 @@
             const x = Math.floor(point.x) + 0.5;
             const z = Math.floor(point.z) + 0.5;
 
-            const hoverState = gameManager.getHoverState(selectedTool, x, z);
-            inputManager.updateHoverIndicator(
+            const hoverState = gameManager.getHoverState(
+                selectedTool,
                 x,
                 z,
+                intersect.object,
+            );
+            inputManager.updateHoverIndicator(
+                hoverState.x !== undefined ? hoverState.x : x,
+                hoverState.z !== undefined ? hoverState.z : z,
                 hoverState.visible,
                 hoverState.color,
-                hoverState.scaleY,
+                hoverState.scale,
                 hoverState.posY,
+                hoverState.rotation,
             );
         } else {
             inputManager.updateHoverIndicator(0, 0, false);

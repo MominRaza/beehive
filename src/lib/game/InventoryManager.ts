@@ -11,7 +11,7 @@ export class InventoryManager {
         // But if it's a new game, we might want to.
         // For now, let's assume the store is the source of truth.
         // Actually, let's reset it to ensure clean state on new manager
-        inventory.set({ "coins": 100 });
+        inventory.set({ "coins": 1000 });
     }
 
     addItem(item: string, count: number): boolean {

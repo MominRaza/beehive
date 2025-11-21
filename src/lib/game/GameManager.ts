@@ -95,9 +95,23 @@ export class GameManager {
         this.signManager.updateSigns(buyableChunks);
     }
 
-    handleInput(tool: ToolType, x: number, z: number): { success: boolean, message?: string, data?: any } {
+    private isSignObject(object?: THREE.Object3D): boolean {
+        if (!object) return false;
+        let obj: THREE.Object3D | null = object;
+        while (obj) {
+            if (obj.userData && obj.userData.isSign) {
+                return true;
+            }
+            obj = obj.parent;
+        }
+        return false;
+    }
+
+    handleInput(tool: ToolType, x: number, z: number, intersectedObject?: THREE.Object3D): { success: boolean, message?: string, data?: any } {
         if (tool === "none") {
             // Check for sign interaction
+            if (!this.isSignObject(intersectedObject)) return { success: false };
+
             // Signs are at center of chunks: cx*12, cz*12
             // We check if the click is close to any buyable chunk center
             const { cx, cz } = this.getChunkCoords(x, z);
@@ -210,34 +224,52 @@ export class GameManager {
         return { success: false };
     }
 
-    getHoverState(tool: ToolType, x: number, z: number): { visible: boolean, color?: number, scaleY?: number, posY?: number } {
+    getHoverState(tool: ToolType, x: number, z: number, intersectedObject?: THREE.Object3D): { visible: boolean, color?: number, scale?: number | THREE.Vector3, posY?: number, rotation?: THREE.Euler, x?: number, z?: number } {
         if (tool === "none") {
             // Hover effect for signs
+            if (!this.isSignObject(intersectedObject)) return { visible: false };
+
             const { cx, cz } = this.getChunkCoords(x, z);
             const chunkCenterX = cx * CHUNK_SIZE;
             const chunkCenterZ = cz * CHUNK_SIZE;
 
-            if (Math.abs(x - chunkCenterX) < 1.5 && Math.abs(z - chunkCenterZ) < 1.5) {
-                if (!this.unlockedChunks.has(`${cx},${cz}`)) {
-                    // Check if chunk is valid
-                    if (!this.isValidChunk(cx, cz)) return { visible: false };
+            if (!this.unlockedChunks.has(`${cx},${cz}`)) {
+                // Check if chunk is valid
+                if (!this.isValidChunk(cx, cz)) return { visible: false };
 
-                    const isAdjacent =
-                        this.unlockedChunks.has(`${cx + 1},${cz}`) ||
-                        this.unlockedChunks.has(`${cx - 1},${cz}`) ||
-                        this.unlockedChunks.has(`${cx},${cz + 1}`) ||
-                        this.unlockedChunks.has(`${cx},${cz - 1}`);
+                const isAdjacent =
+                    this.unlockedChunks.has(`${cx + 1},${cz}`) ||
+                    this.unlockedChunks.has(`${cx - 1},${cz}`) ||
+                    this.unlockedChunks.has(`${cx},${cz + 1}`) ||
+                    this.unlockedChunks.has(`${cx},${cz - 1}`);
 
-                    if (isAdjacent) {
-                        return { visible: true, color: 0xffff00, scaleY: 1, posY: 0.5 }; // Yellow highlight for sign
-                    }
+                if (isAdjacent) {
+                    // Highlight the board
+                    // Board is at y=1, z offset 0.06
+                    // Board dims: 1 x 0.6 x 0.1
+                    // Indicator base: 1 x 0.1 x 1
+                    // Rotate X 90: Local Z (1) -> World Y. Local Y (0.1) -> World Z.
+                    // We want World Y = 0.7 -> Scale Z = 0.7
+                    // We want World Z = 0.2 (slightly thicker) -> Scale Y = 2.0
+                    // We want World X = 1.1 (slightly wider) -> Scale X = 1.1
+                    const scale = new THREE.Vector3(1.1, 2.0, 0.7);
+                    const rotation = new THREE.Euler(Math.PI / 2, 0, 0);
+                    return {
+                        visible: true,
+                        color: 0xffff00,
+                        scale,
+                        posY: 1,
+                        rotation,
+                        x: chunkCenterX,
+                        z: chunkCenterZ + 0.06
+                    };
                 }
             }
             return { visible: false };
         }
 
         if (!this.isTileUnlocked(x, z)) {
-            return { visible: true, color: 0x333333, scaleY: 1, posY: 0.05 }; // Dark grey for locked
+            return { visible: true, color: 0x333333, scale: 1, posY: 0.05 }; // Dark grey for locked
         }
 
         // Prevent hover near hut
@@ -247,7 +279,7 @@ export class GameManager {
 
         if (tool === "tree") {
             if (tileType === "grass") {
-                return { visible: true, color: 0x228b22, scaleY: 0.5, posY: 0.35 }; // Forest Green
+                return { visible: true, color: 0x228b22, scale: 0.5, posY: 0.35 }; // Forest Green
             }
             return { visible: false };
         }
@@ -259,20 +291,20 @@ export class GameManager {
             // But GridManager doesn't know about trees. TreeManager does.
             // I can't easily check here without exposing TreeManager state more.
             // Let's just show a red indicator.
-            return { visible: true, color: 0xff0000, scaleY: 1.1, posY: 0.05 };
+            return { visible: true, color: 0xff0000, scale: 1.1, posY: 0.05 };
         }
 
         if (tool === "wheat" || tool === "carrot" || tool === "tomato" || tool === "water" || tool === "harvest") {
             if (tileType === "dirt") {
                 if (tool === "water") {
-                    return { visible: true, color: 0x0000ff, scaleY: 1.1, posY: 0.05 }; // Blue
+                    return { visible: true, color: 0x0000ff, scale: 1.1, posY: 0.05 }; // Blue
                 } else if (tool === "harvest") {
-                    return { visible: true, color: 0x800080, scaleY: 1.1, posY: 0.05 }; // Purple
+                    return { visible: true, color: 0x800080, scale: 1.1, posY: 0.05 }; // Purple
                 } else {
                     let color = 0xffff00; // Wheat
                     if (tool === "carrot") color = 0xffa500;
                     if (tool === "tomato") color = 0xff6347;
-                    return { visible: true, color, scaleY: 0.5, posY: 0.35 };
+                    return { visible: true, color, scale: 0.5, posY: 0.35 };
                 }
             }
             return { visible: false };
@@ -280,24 +312,24 @@ export class GameManager {
 
         // Tile placement tools
         let color = 0xffffff;
-        let scaleY = 1;
+        let scale = 1;
         let posY = 0.05;
 
         if (tool === "dirt") {
             color = 0x8b4513;
-            scaleY = 1;
+            scale = 1;
             posY = 0.05;
         } else if (tool === "grass") {
             color = 0x228b22;
-            scaleY = 3;
+            scale = 3;
             posY = 0.15;
         } else if (tool === "path") {
             color = 0x808080;
-            scaleY = 4;
+            scale = 4;
             posY = 0.2;
         }
 
-        return { visible: true, color, scaleY, posY };
+        return { visible: true, color, scale, posY };
     }
 
     update(deltaTime: number) {

@@ -58,7 +58,7 @@ export class SignManager {
         const boardMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c }); // Tan
         const board = new THREE.Mesh(boardGeo, boardMat);
         board.position.y = 1;
-        board.position.z = 0.05; // Slightly forward
+        board.position.z = 0.06; // Slightly forward
         group.add(board);
 
         // Text (Optional, maybe just a colored rect for now to indicate "FOR SALE")
@@ -66,7 +66,7 @@ export class SignManager {
         const textMat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red "Sale" tag
         const text = new THREE.Mesh(textGeo, textMat);
         text.position.y = 1;
-        text.position.z = 0.11;
+        text.position.z = 0.12;
         group.add(text);
 
         group.position.set(x, SURFACE_HEIGHTS.GRASS, z);
