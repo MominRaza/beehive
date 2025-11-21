@@ -1,9 +1,9 @@
 <script lang="ts">
     import GameButton from "./GameButton.svelte";
     import Panel from "./Panel.svelte";
+    import { inventory } from "../stores";
 
     export let selectedTool: string;
-    export let inventory: Record<string, number> = {};
     export let onSelectTool: (tool: string) => void;
 
     const tools = [
@@ -68,10 +68,10 @@
 
             <div class="tool-group">
                 {#each tools.filter((t) => t.group === "seeds") as tool}
-                    {#if (inventory[tool.item || ""] || 0) > 0}
+                    {#if ($inventory[tool.item || ""] || 0) > 0}
                         <div
                             class="tool-wrapper"
-                            title="{tool.label} ({inventory[tool.item || ''] ||
+                            title="{tool.label} ({$inventory[tool.item || ''] ||
                                 0})"
                         >
                             <GameButton
@@ -83,7 +83,7 @@
                                 <div class="btn-content">
                                     <span>{tool.icon}</span>
                                     <span class="badge"
-                                        >{inventory[tool.item || ""] || 0}</span
+                                        >{$inventory[tool.item || ""] || 0}</span
                                     >
                                 </div>
                             </GameButton>

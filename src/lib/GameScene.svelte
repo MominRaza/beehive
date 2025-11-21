@@ -24,9 +24,7 @@
     let inputManager: InputManager;
 
     let selectedTool: ToolType = "none";
-    let inventory: any = {};
-    let produceCount: number = 0;
-    let maxCapacity: number = 20;
+    // inventory, produceCount, maxCapacity removed as they are now in stores
     let notification: string | null = null;
 
     onMount(() => {
@@ -107,12 +105,7 @@
         gameManager = new GameManager(scene);
         inputManager = new InputManager(camera, ground, scene);
 
-        // Subscribe to inventory
-        gameManager.inventoryManager.subscribe((inv) => {
-            inventory = inv;
-            produceCount = gameManager.inventoryManager.getProduceCount();
-            maxCapacity = gameManager.inventoryManager.getMaxCapacity();
-        });
+        // Inventory subscription removed
 
         loadGame();
     }
@@ -237,8 +230,9 @@
     function handleBuy(event: CustomEvent) {
         const item = event.detail.item;
         const price = PRICES[item].buy;
-
-        if (inventory["coins"] >= price) {
+        
+        // We can access inventory via gameManager or store, but gameManager handles logic
+        if (gameManager.inventoryManager.getCount("coins") >= price) {
             gameManager.inventoryManager.removeItem("coins", price);
             gameManager.inventoryManager.addItem(item, 1);
             notification = `Bought ${item.replace("_", " ")}!`;
@@ -251,7 +245,7 @@
         const item = event.detail.item;
         const price = PRICES[item].sell;
 
-        if (inventory[item] > 0) {
+        if (gameManager.inventoryManager.getCount(item) > 0) {
             gameManager.inventoryManager.removeItem(item, 1);
             gameManager.inventoryManager.addItem("coins", price);
             notification = `Sold ${item.replace("_", " ")}!`;
@@ -265,9 +259,6 @@
 
 <HUD
     bind:selectedTool
-    {inventory}
-    {produceCount}
-    {maxCapacity}
     bind:notification
     on:save={saveGame}
     on:delete={deleteGame}

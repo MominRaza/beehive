@@ -1,15 +1,17 @@
-import type { InventoryItemType, InventoryState } from './types';
+import { get } from 'svelte/store';
+import { inventory } from '../stores';
+import type { InventoryState } from './types';
 
 export class InventoryManager {
-    private items: InventoryState = {};
-    private listeners: ((inventory: InventoryState) => void)[] = [];
     private maxCapacity: number = 20; // Limit for produce/wood
 
     constructor() {
         // Initialize with starter coins and no items
-        this.items = {
-            "coins": 100
-        };
+        // We don't reset the store here because we might be loading a save
+        // But if it's a new game, we might want to.
+        // For now, let's assume the store is the source of truth.
+        // Actually, let's reset it to ensure clean state on new manager
+        inventory.set({ "coins": 100 });
     }
 
     addItem(item: string, count: number): boolean {
@@ -20,32 +22,42 @@ export class InventoryManager {
             }
         }
 
-        if (!this.items[item]) {
-            this.items[item] = 0;
-        }
-        this.items[item] += count;
-        this.notifyListeners();
+        inventory.update(items => {
+            const newItems = { ...items };
+            if (!newItems[item]) {
+                newItems[item] = 0;
+            }
+            newItems[item] += count;
+            return newItems;
+        });
         return true;
     }
 
     removeItem(item: string, count: number): boolean {
-        if (!this.items[item] || this.items[item] < count) {
+        const items = get(inventory);
+        if (!items[item] || items[item] < count) {
             return false;
         }
-        this.items[item] -= count;
-        this.notifyListeners();
+
+        inventory.update(currentItems => {
+            const newItems = { ...currentItems };
+            newItems[item] -= count;
+            return newItems;
+        });
         return true;
     }
 
     getCount(item: string): number {
-        return this.items[item] || 0;
+        const items = get(inventory);
+        return items[item] || 0;
     }
 
     getProduceCount(): number {
+        const items = get(inventory);
         let count = 0;
-        for (const key in this.items) {
+        for (const key in items) {
             if (this.isProduce(key)) {
-                count += this.items[key];
+                count += items[key];
             }
         }
         return count;
@@ -60,24 +72,12 @@ export class InventoryManager {
     }
 
     serialize(): InventoryState {
-        return { ...this.items };
+        return get(inventory);
     }
-
 
     load(data: InventoryState) {
-        this.items = { ...data };
-        this.notifyListeners();
+        inventory.set({ ...data });
     }
 
-    subscribe(listener: (inventory: InventoryState) => void) {
-        this.listeners.push(listener);
-        listener(this.items); // Initial call
-        return () => {
-            this.listeners = this.listeners.filter(l => l !== listener);
-        };
-    }
-
-    private notifyListeners() {
-        this.listeners.forEach(l => l(this.items));
-    }
+    // subscribe method removed as we use the store directly in UI
 }

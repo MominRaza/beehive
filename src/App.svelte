@@ -2,7 +2,7 @@
   import GameScene from "./lib/GameScene.svelte";
   import TestScene from "./lib/TestScene.svelte";
 
-  let currentView: "game" | "test" = "test";
+  let currentView: "game" | "test" = "game";
 
   function goToTestScene() {
     currentView = "test";

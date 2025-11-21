@@ -1,11 +1,11 @@
 <script lang="ts">
     import Panel from "./Panel.svelte";
     import GameButton from "./GameButton.svelte";
+    import { inventory } from "../stores";
 
-    export let inventory: Record<string, number> = {};
     export let onClose: () => void;
 
-    $: produceItems = Object.entries(inventory).filter(
+    $: produceItems = Object.entries($inventory).filter(
         ([item, count]) =>
             count > 0 && (item.includes("produce") || item === "wood"),
     );

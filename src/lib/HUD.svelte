@@ -12,9 +12,6 @@
     const dispatch = createEventDispatcher();
 
     export let selectedTool: string;
-    export let inventory: Record<string, number> = {};
-    export let maxCapacity: number = 20;
-    export let produceCount: number = 0;
     export let notification: string | null = null;
 
     let showMarket = false;
@@ -59,7 +56,7 @@
 
 <Notification message={notification} />
 
-<Stats {inventory} {produceCount} {maxCapacity} />
+<Stats />
 
 <div class="top-right-actions">
     <GameButton
@@ -71,23 +68,14 @@
     </GameButton>
 </div>
 
-<Toolbar
-    {selectedTool}
-    {inventory}
-    onSelectTool={(tool) => (selectedTool = tool)}
-/>
+<Toolbar {selectedTool} onSelectTool={(tool) => (selectedTool = tool)} />
 
 {#if showInventory}
-    <InventoryDialog {inventory} onClose={() => (showInventory = false)} />
+    <InventoryDialog onClose={() => (showInventory = false)} />
 {/if}
 
 {#if showMarket}
-    <Market
-        {inventory}
-        onClose={() => (showMarket = false)}
-        onBuy={buy}
-        onSell={sell}
-    />
+    <Market onClose={() => (showMarket = false)} onBuy={buy} onSell={sell} />
 {/if}
 
 {#if showPauseMenu}

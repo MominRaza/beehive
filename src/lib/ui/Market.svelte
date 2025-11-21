@@ -2,8 +2,8 @@
     import Panel from "./Panel.svelte";
     import GameButton from "./GameButton.svelte";
     import { PRICES } from "../game/types";
+    import { inventory } from "../stores";
 
-    export let inventory: Record<string, number> = {};
     export let onClose: () => void;
     export let onBuy: (item: string) => void;
     export let onSell: (item: string) => void;
@@ -53,7 +53,7 @@
                                     </div>
                                     <GameButton
                                         variant="primary"
-                                        disabled={inventory["coins"] <
+                                        disabled={$inventory["coins"] <
                                             price.buy}
                                         onClick={() => onBuy(item)}
                                         className="action-btn"
@@ -91,12 +91,12 @@
                                     </div>
                                     <GameButton
                                         variant="secondary"
-                                        disabled={!inventory[item] ||
-                                            inventory[item] <= 0}
+                                        disabled={!$inventory[item] ||
+                                            $inventory[item] <= 0}
                                         onClick={() => onSell(item)}
                                         className="action-btn"
                                     >
-                                        Sell ({inventory[item] || 0})
+                                        Sell ({$inventory[item] || 0})
                                     </GameButton>
                                 </div>
                             {/if}

@@ -1,18 +1,16 @@
 <script lang="ts">
-    export let inventory: Record<string, number> = {};
-    export let produceCount: number = 0;
-    export let maxCapacity: number = 20;
+    import { inventory, produceCount, maxCapacity } from "../stores";
 </script>
 
 <div class="stats-container">
     <div class="stat-box">
         <span class="icon">🪙</span>
-        <span class="value coin-value">{inventory["coins"] || 0}</span>
+        <span class="value coin-value">{$inventory["coins"] || 0}</span>
     </div>
     <div class="stat-box">
         <span class="icon">📦</span>
-        <span class="value {produceCount >= maxCapacity ? 'danger' : ''}">
-            {produceCount} / {maxCapacity}
+        <span class="value {$produceCount >= $maxCapacity ? 'danger' : ''}">
+            {$produceCount} / {$maxCapacity}
         </span>
     </div>
 </div>
