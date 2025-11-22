@@ -11,7 +11,13 @@
         { id: "wheat", name: "Wheat", color: "#ffd700" },
         { id: "carrot", name: "Carrot", color: "#ff8c00" },
         { id: "tomato", name: "Tomato", color: "#ff0000" },
+        { id: "pine", name: "Pine", color: "#2e8b57" },
+        { id: "oak", name: "Oak", color: "#006400" },
+        { id: "apple", name: "Apple", color: "#ff4500" },
+        { id: "mango", name: "Mango", color: "#ffd700" },
         { id: "harvest", name: "Harvest", color: "#ff69b4" },
+        { id: "harvest_fruit", name: "Pick Fruit", color: "#ff1493" },
+        { id: "axe", name: "Axe", color: "#708090" },
     ];
 </script>
 

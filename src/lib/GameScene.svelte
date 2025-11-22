@@ -150,6 +150,33 @@
             color: 0xff0000,
         });
 
+        // Tree Materials
+        const pineMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57 }); // SeaGreen
+        const oakMat = new THREE.MeshStandardMaterial({ color: 0x228b22 }); // ForestGreen
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 }); // SaddleBrown
+        const appleFruitMat = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+        }); // Red
+        const mangoFruitMat = new THREE.MeshStandardMaterial({
+            color: 0xffd700,
+        }); // Gold
+
+        // Pine Geometries
+        const pineStage2Geo = new THREE.ConeGeometry(0.15, 0.4, 8);
+        const pineTrunkSmallGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
+        const pineFoliageSmallGeo = new THREE.ConeGeometry(0.25, 0.6, 8);
+        const pineTrunkLargeGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.4);
+        const pineFoliageLarge1Geo = new THREE.ConeGeometry(0.35, 0.8, 8);
+        const pineFoliageLarge2Geo = new THREE.ConeGeometry(0.25, 0.6, 8);
+
+        // Oak/Apple/Mango Geometries
+        const oakStage2Geo = new THREE.DodecahedronGeometry(0.2);
+        const oakTrunkSmallGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
+        const oakFoliageSmallGeo = new THREE.DodecahedronGeometry(0.3);
+        const oakTrunkLargeGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.5);
+        const oakFoliageLargeGeo = new THREE.DodecahedronGeometry(0.4);
+        const fruitGeo = new THREE.SphereGeometry(0.08);
+
         const tiles = new Map<string, THREE.Object3D>();
         const crops = new Map<
             string,
@@ -221,7 +248,9 @@
             z: number,
         ) => {
             const group = new THREE.Group();
-            group.position.set(x, 0.1, z);
+            const isTree = ["pine", "oak", "apple", "mango"].includes(type);
+            const y = isTree ? 0.2 : 0.1;
+            group.position.set(x, y, z);
 
             const addMesh = (mesh: THREE.Mesh) => {
                 mesh.castShadow = true;
@@ -322,6 +351,80 @@
                     f3.position.set(0.1, 0.3, -0.2);
                     addMesh(f3);
                 }
+            } else if (type === "pine") {
+                if (stage === 2) {
+                    const mesh = new THREE.Mesh(pineStage2Geo, pineMat);
+                    mesh.position.y = 0.2;
+                    addMesh(mesh);
+                } else if (stage === 3) {
+                    const trunk = new THREE.Mesh(pineTrunkSmallGeo, trunkMat);
+                    trunk.position.y = 0.15;
+                    addMesh(trunk);
+
+                    const foliage = new THREE.Mesh(
+                        pineFoliageSmallGeo,
+                        pineMat,
+                    );
+                    foliage.position.y = 0.45;
+                    addMesh(foliage);
+                } else if (stage === 4) {
+                    const trunk = new THREE.Mesh(pineTrunkLargeGeo, trunkMat);
+                    trunk.position.y = 0.2;
+                    addMesh(trunk);
+
+                    const foliage1 = new THREE.Mesh(
+                        pineFoliageLarge1Geo,
+                        pineMat,
+                    );
+                    foliage1.position.y = 0.6;
+                    addMesh(foliage1);
+
+                    const foliage2 = new THREE.Mesh(
+                        pineFoliageLarge2Geo,
+                        pineMat,
+                    );
+                    foliage2.position.y = 1.0;
+                    addMesh(foliage2);
+                }
+            } else if (type === "oak" || type === "apple" || type === "mango") {
+                if (stage === 2) {
+                    const mesh = new THREE.Mesh(oakStage2Geo, oakMat);
+                    mesh.position.y = 0.2;
+                    addMesh(mesh);
+                } else if (stage === 3) {
+                    const trunk = new THREE.Mesh(oakTrunkSmallGeo, trunkMat);
+                    trunk.position.y = 0.15;
+                    addMesh(trunk);
+
+                    const foliage = new THREE.Mesh(oakFoliageSmallGeo, oakMat);
+                    foliage.position.y = 0.45;
+                    addMesh(foliage);
+                } else if (stage >= 4) {
+                    const trunk = new THREE.Mesh(oakTrunkLargeGeo, trunkMat);
+                    trunk.position.y = 0.25;
+                    addMesh(trunk);
+
+                    const foliage = new THREE.Mesh(oakFoliageLargeGeo, oakMat);
+                    foliage.position.y = 0.65;
+                    addMesh(foliage);
+
+                    if (stage === 5) {
+                        const mat =
+                            type === "apple" ? appleFruitMat : mangoFruitMat;
+                        const positions = [
+                            [0.25, 0.6, 0.15],
+                            [-0.2, 0.7, 0.2],
+                            [0.1, 0.5, -0.25],
+                            [-0.15, 0.8, -0.1],
+                        ];
+
+                        positions.forEach((pos) => {
+                            const fruit = new THREE.Mesh(fruitGeo, mat);
+                            fruit.position.set(pos[0], pos[1], pos[2]);
+                            addMesh(fruit);
+                        });
+                    }
+                }
             }
 
             return group;
@@ -382,10 +485,59 @@
                     if (selectedSeed === "harvest") {
                         if (tile && tile.userData.hasCrop) {
                             const cropData = crops.get(key);
-                            if (cropData && cropData.stage === 4) {
+                            if (
+                                cropData &&
+                                ["wheat", "carrot", "tomato"].includes(
+                                    cropData.type,
+                                ) &&
+                                cropData.stage === 4
+                            ) {
                                 scene.remove(cropData.mesh);
                                 crops.delete(key);
                                 tile.userData.hasCrop = false;
+                            }
+                        }
+                    } else if (selectedSeed === "harvest_fruit") {
+                        if (tile && tile.userData.hasCrop) {
+                            const cropData = crops.get(key);
+                            if (
+                                cropData &&
+                                ["apple", "mango"].includes(cropData.type) &&
+                                cropData.stage === 5
+                            ) {
+                                scene.remove(cropData.mesh);
+                                cropData.stage = 3;
+                                cropData.lastStageUpdate = performance.now();
+                                const newMesh = createCrop(
+                                    cropData.type,
+                                    3,
+                                    x,
+                                    z,
+                                );
+                                scene.add(newMesh);
+                                cropData.mesh = newMesh;
+                            }
+                        }
+                    } else if (selectedSeed === "axe") {
+                        if (tile && tile.userData.hasCrop) {
+                            const cropData = crops.get(key);
+                            if (cropData) {
+                                const isTree = [
+                                    "pine",
+                                    "oak",
+                                    "apple",
+                                    "mango",
+                                ].includes(cropData.type);
+                                const maxStage = ["apple", "mango"].includes(
+                                    cropData.type,
+                                )
+                                    ? 5
+                                    : 4;
+                                if (isTree && cropData.stage === maxStage) {
+                                    scene.remove(cropData.mesh);
+                                    crops.delete(key);
+                                    tile.userData.hasCrop = false;
+                                }
                             }
                         }
                     } else if (
@@ -394,6 +546,25 @@
                         if (
                             tile &&
                             tile.userData.type === "soil" &&
+                            !tile.userData.hasCrop
+                        ) {
+                            const crop = createCrop(selectedSeed, 1, x, z);
+                            scene.add(crop);
+                            tile.userData.hasCrop = true;
+                            crops.set(key, {
+                                mesh: crop,
+                                type: selectedSeed,
+                                stage: 1,
+                                plantedAt: performance.now(),
+                                lastStageUpdate: performance.now(),
+                            });
+                        }
+                    } else if (
+                        ["pine", "oak", "apple", "mango"].includes(selectedSeed)
+                    ) {
+                        if (
+                            tile &&
+                            tile.userData.type === "grass" &&
                             !tile.userData.hasCrop
                         ) {
                             const crop = createCrop(selectedSeed, 1, x, z);
@@ -440,11 +611,20 @@
 
             const now = performance.now();
             crops.forEach((cropData, key) => {
-                if (cropData.stage < 4) {
+                const maxStage = ["apple", "mango"].includes(cropData.type)
+                    ? 5
+                    : 4;
+                if (cropData.stage < maxStage) {
                     let growthTime = 0;
                     if (cropData.type === "wheat") growthTime = 5000;
                     else if (cropData.type === "carrot") growthTime = 10000;
                     else if (cropData.type === "tomato") growthTime = 15000;
+                    else if (
+                        ["pine", "oak", "apple", "mango"].includes(
+                            cropData.type,
+                        )
+                    )
+                        growthTime = 20000;
 
                     if (now - cropData.lastStageUpdate > growthTime) {
                         // Upgrade stage
@@ -575,6 +755,21 @@
             tomatoPlantMat.dispose();
             tomatoFruitGeo.dispose();
             tomatoFruitMat.dispose();
+
+            // Tree geometries
+            pineStage2Geo.dispose();
+            pineTrunkSmallGeo.dispose();
+            pineFoliageSmallGeo.dispose();
+            pineTrunkLargeGeo.dispose();
+            pineFoliageLarge1Geo.dispose();
+            pineFoliageLarge2Geo.dispose();
+
+            oakStage2Geo.dispose();
+            oakTrunkSmallGeo.dispose();
+            oakFoliageSmallGeo.dispose();
+            oakTrunkLargeGeo.dispose();
+            oakFoliageLargeGeo.dispose();
+            fruitGeo.dispose();
 
             interactionPlane.geometry.dispose();
             (interactionPlane.material as THREE.Material).dispose();
