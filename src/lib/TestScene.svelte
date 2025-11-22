@@ -16,6 +16,9 @@
             0.1,
             1000,
         );
+        camera.position.set(5, 5, 5);
+        camera.lookAt(scene.position);
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
 
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -33,160 +36,232 @@
         });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
-        ground.position.y = 0;
         scene.add(ground);
 
-        // Cube
-        const cubeGeometry = new THREE.BoxGeometry();
-        const cubeMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
-            wireframe: true,
-        });
-        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube.position.x = -9;
-        scene.add(cube);
+        // Soil Tile
+        const soilGeometry = new THREE.BoxGeometry(1, 0.1, 1);
+        const soilMaterial = new THREE.MeshBasicMaterial({ color: 0x8b4513 }); // SaddleBrown
+        const soilTile = new THREE.Mesh(soilGeometry, soilMaterial);
+        soilTile.position.set(-2, 0.05, 0);
+        scene.add(soilTile);
 
-        // Sphere
-        const sphereGeometry = new THREE.SphereGeometry(0.7, 32, 16);
-        const sphereMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff0000,
-            wireframe: true,
-        });
-        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-        sphere.position.x = -7;
-        scene.add(sphere);
+        // Grass Tile
+        const grassTile = new THREE.Group();
+        const grassSoilMesh = new THREE.Mesh(soilGeometry, soilMaterial);
+        grassSoilMesh.position.y = 0.05;
 
-        // Cone
-        const coneGeometry = new THREE.ConeGeometry(0.7, 1.5, 32);
-        const coneMaterial = new THREE.MeshBasicMaterial({
-            color: 0x0000ff,
-            wireframe: true,
-        });
-        const cone = new THREE.Mesh(coneGeometry, coneMaterial);
-        cone.position.x = -5;
-        scene.add(cone);
+        const grassTopGeometry = new THREE.BoxGeometry(1, 0.1, 1);
+        const grassMaterial = new THREE.MeshBasicMaterial({ color: 0x228b22 }); // ForestGreen
+        const grassTopMesh = new THREE.Mesh(grassTopGeometry, grassMaterial);
+        grassTopMesh.position.y = 0.15;
 
-        // Torus
-        const torusGeometry = new THREE.TorusGeometry(0.6, 0.2, 16, 100);
-        const torusMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffff00,
-            wireframe: true,
-        });
-        const torus = new THREE.Mesh(torusGeometry, torusMaterial);
-        torus.position.x = -3;
-        scene.add(torus);
+        grassTile.add(grassSoilMesh);
+        grassTile.add(grassTopMesh);
+        grassTile.position.x = 0;
+        scene.add(grassTile);
 
-        // Cylinder
-        const cylinderGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32);
-        const cylinderMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00ffff,
-            wireframe: true,
-        });
-        const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
-        cylinder.position.x = -1;
-        scene.add(cylinder);
+        // Path Tile
+        const pathTile = new THREE.Group();
+        const pathSoilMesh = new THREE.Mesh(soilGeometry, soilMaterial);
+        pathSoilMesh.position.y = 0.05;
 
-        // Dodecahedron
-        const dodecahedronGeometry = new THREE.DodecahedronGeometry(0.7);
-        const dodecahedronMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff00ff,
-            wireframe: true,
-        });
-        const dodecahedron = new THREE.Mesh(
-            dodecahedronGeometry,
-            dodecahedronMaterial,
-        );
-        dodecahedron.position.x = 1;
-        scene.add(dodecahedron);
+        const pathGrassMesh = new THREE.Mesh(grassTopGeometry, grassMaterial);
+        pathGrassMesh.position.y = 0.15;
 
-        // TorusKnot
-        const torusKnotGeometry = new THREE.TorusKnotGeometry(
-            0.5,
-            0.2,
-            100,
-            16,
-        );
-        const torusKnotMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff8800,
-            wireframe: true,
-        });
-        const torusKnot = new THREE.Mesh(torusKnotGeometry, torusKnotMaterial);
-        torusKnot.position.x = 3;
-        scene.add(torusKnot);
+        const pathTopGeometry = new THREE.BoxGeometry(1, 0.1, 1);
+        const pathMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 }); // Gray
+        const pathTopMesh = new THREE.Mesh(pathTopGeometry, pathMaterial);
+        pathTopMesh.position.y = 0.25;
 
-        // Icosahedron
-        const icosahedronGeometry = new THREE.IcosahedronGeometry(0.7);
-        const icosahedronMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00ff88,
-            wireframe: true,
-        });
-        const icosahedron = new THREE.Mesh(
-            icosahedronGeometry,
-            icosahedronMaterial,
-        );
-        icosahedron.position.x = 5;
-        scene.add(icosahedron);
+        pathTile.add(pathSoilMesh);
+        pathTile.add(pathGrassMesh);
+        pathTile.add(pathTopMesh);
+        pathTile.position.x = 2;
+        scene.add(pathTile);
 
-        // Octahedron
-        const octahedronGeometry = new THREE.OctahedronGeometry(0.7);
-        const octahedronMaterial = new THREE.MeshBasicMaterial({
-            color: 0x8800ff,
-            wireframe: true,
-        });
-        const octahedron = new THREE.Mesh(
-            octahedronGeometry,
-            octahedronMaterial,
-        );
-        octahedron.position.x = 7;
-        scene.add(octahedron);
+        // --- Crops Display ---
+        const cropsGroup = new THREE.Group();
+        scene.add(cropsGroup);
 
-        // Tetrahedron
-        const tetrahedronGeometry = new THREE.TetrahedronGeometry(0.7);
-        const tetrahedronMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff0088,
-            wireframe: true,
-        });
-        const tetrahedron = new THREE.Mesh(
-            tetrahedronGeometry,
-            tetrahedronMaterial,
-        );
-        tetrahedron.position.x = 9;
-        scene.add(tetrahedron);
+        const createSoilBase = (x: number, z: number) => {
+            const geo = new THREE.BoxGeometry(1, 0.1, 1);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x8b4513 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, 0.05, z);
+            cropsGroup.add(mesh);
+            return { geo, mat };
+        };
 
-        camera.position.z = 12;
+        const createCrop = (
+            type: "wheat" | "carrot" | "tomato",
+            stage: 1 | 2 | 3 | 4,
+            x: number,
+            z: number,
+        ) => {
+            const group = new THREE.Group();
+            group.position.set(x, 0.1, z); // On top of soil (0.1 height)
+
+            // Stage 1 (Sprout) - Same for all
+            if (stage === 1) {
+                const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.2);
+                const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.y = 0.1;
+                group.add(mesh);
+            } else if (type === "wheat") {
+                if (stage === 2) {
+                    const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0x228b22,
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.y = 0.2;
+                    group.add(mesh);
+                } else if (stage === 3) {
+                    const geo = new THREE.CylinderGeometry(0.08, 0.08, 0.6);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0x228b22,
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.y = 0.3;
+                    group.add(mesh);
+                } else if (stage === 4) {
+                    const stalkGeo = new THREE.CylinderGeometry(
+                        0.05,
+                        0.05,
+                        0.6,
+                    );
+                    const stalkMat = new THREE.MeshBasicMaterial({
+                        color: 0xcccc00,
+                    });
+                    const stalk = new THREE.Mesh(stalkGeo, stalkMat);
+                    stalk.position.y = 0.3;
+                    group.add(stalk);
+
+                    const headGeo = new THREE.BoxGeometry(0.15, 0.3, 0.15);
+                    const headMat = new THREE.MeshBasicMaterial({
+                        color: 0xffd700,
+                    });
+                    const head = new THREE.Mesh(headGeo, headMat);
+                    head.position.y = 0.75;
+                    group.add(head);
+                }
+            } else if (type === "carrot") {
+                if (stage === 2) {
+                    const geo = new THREE.ConeGeometry(0.15, 0.3, 8);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0x228b22,
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.y = 0.15;
+                    group.add(mesh);
+                } else if (stage === 3) {
+                    const geo = new THREE.ConeGeometry(0.25, 0.5, 8);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0x228b22,
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.y = 0.25;
+                    group.add(mesh);
+                } else if (stage === 4) {
+                    const geo = new THREE.ConeGeometry(0.3, 0.6, 8);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0x228b22,
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.y = 0.3;
+                    group.add(mesh);
+
+                    const baseGeo = new THREE.CylinderGeometry(0.1, 0.05, 0.1);
+                    const baseMat = new THREE.MeshBasicMaterial({
+                        color: 0xff8c00,
+                    });
+                    const base = new THREE.Mesh(baseGeo, baseMat);
+                    base.position.y = 0.05;
+                    group.add(base);
+                }
+            } else if (type === "tomato") {
+                if (stage === 2) {
+                    const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0x228b22,
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.y = 0.2;
+                    group.add(mesh);
+
+                    const leafGeo = new THREE.BoxGeometry(0.2, 0.02, 0.05);
+                    const leaf = new THREE.Mesh(leafGeo, mat);
+                    leaf.position.set(0.1, 0.3, 0);
+                    group.add(leaf);
+                } else if (stage === 3) {
+                    const geo = new THREE.DodecahedronGeometry(0.25);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0x228b22,
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.y = 0.3;
+                    group.add(mesh);
+
+                    const stemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
+                    const stem = new THREE.Mesh(stemGeo, mat);
+                    stem.position.y = 0.15;
+                    group.add(stem);
+                } else if (stage === 4) {
+                    const geo = new THREE.DodecahedronGeometry(0.3);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: 0x228b22,
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.y = 0.4;
+                    group.add(mesh);
+
+                    const stemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
+                    const stem = new THREE.Mesh(stemGeo, mat);
+                    stem.position.y = 0.2;
+                    group.add(stem);
+
+                    const fruitGeo = new THREE.SphereGeometry(0.08);
+                    const fruitMat = new THREE.MeshBasicMaterial({
+                        color: 0xff0000,
+                    });
+
+                    const f1 = new THREE.Mesh(fruitGeo, fruitMat);
+                    f1.position.set(0.2, 0.4, 0.1);
+                    group.add(f1);
+
+                    const f2 = new THREE.Mesh(fruitGeo, fruitMat);
+                    f2.position.set(-0.15, 0.5, 0.2);
+                    group.add(f2);
+
+                    const f3 = new THREE.Mesh(fruitGeo, fruitMat);
+                    f3.position.set(0.1, 0.3, -0.2);
+                    group.add(f3);
+                }
+            }
+
+            cropsGroup.add(group);
+        };
+
+        // Generate Grid
+        const crops = ["wheat", "carrot", "tomato"] as const;
+        const startZ = -2;
+        const startX = -2;
+        const spacingX = 1.5;
+        const spacingZ = 1.5;
+
+        crops.forEach((crop, rowIndex) => {
+            for (let stage = 1; stage <= 4; stage++) {
+                const x = startX + (stage - 1) * spacingX;
+                const z = startZ - rowIndex * spacingZ;
+
+                createSoilBase(x, z);
+                createCrop(crop, stage as 1 | 2 | 3 | 4, x, z);
+            }
+        });
 
         const animate = () => {
             frameId = requestAnimationFrame(animate);
-
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
-
-            sphere.rotation.x += 0.01;
-            sphere.rotation.y += 0.01;
-
-            cone.rotation.x += 0.01;
-            cone.rotation.y += 0.01;
-
-            torus.rotation.x += 0.01;
-            torus.rotation.y += 0.01;
-
-            cylinder.rotation.x += 0.01;
-            cylinder.rotation.y += 0.01;
-
-            dodecahedron.rotation.x += 0.01;
-            dodecahedron.rotation.y += 0.01;
-
-            torusKnot.rotation.x += 0.01;
-            torusKnot.rotation.y += 0.01;
-
-            icosahedron.rotation.x += 0.01;
-            icosahedron.rotation.y += 0.01;
-
-            octahedron.rotation.x += 0.01;
-            octahedron.rotation.y += 0.01;
-
-            tetrahedron.rotation.x += 0.01;
-            tetrahedron.rotation.y += 0.01;
 
             controls.update();
 
@@ -212,26 +287,12 @@
             groundGeometry.dispose();
             groundMaterial.dispose();
 
-            cubeGeometry.dispose();
-            cubeMaterial.dispose();
-            sphereGeometry.dispose();
-            sphereMaterial.dispose();
-            coneGeometry.dispose();
-            coneMaterial.dispose();
-            torusGeometry.dispose();
-            torusMaterial.dispose();
-            cylinderGeometry.dispose();
-            cylinderMaterial.dispose();
-            dodecahedronGeometry.dispose();
-            dodecahedronMaterial.dispose();
-            torusKnotGeometry.dispose();
-            torusKnotMaterial.dispose();
-            icosahedronGeometry.dispose();
-            icosahedronMaterial.dispose();
-            octahedronGeometry.dispose();
-            octahedronMaterial.dispose();
-            tetrahedronGeometry.dispose();
-            tetrahedronMaterial.dispose();
+            soilGeometry.dispose();
+            soilMaterial.dispose();
+            grassTopGeometry.dispose();
+            grassMaterial.dispose();
+            pathTopGeometry.dispose();
+            pathMaterial.dispose();
         };
     });
 </script>
