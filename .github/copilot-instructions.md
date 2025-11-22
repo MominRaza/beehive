@@ -1,4 +1,5 @@
 - This project uses **Bun** as the package manager and runtime.
+- Run `bun run check` to verify code quality and check for errors.
 - Check if port 5173 is in use (use `Get-NetTCPConnection -LocalPort 5173`):
   - In use: Launch browser at http://localhost:5173/beehive/
   - Not in use: Run `bun run dev`, then launch browser at http://localhost:5173/beehive/
