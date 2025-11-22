@@ -30,6 +30,8 @@
         camera.lookAt(scene.position);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.setSize(window.innerWidth, window.innerHeight);
         container.appendChild(renderer.domElement);
 
@@ -38,6 +40,22 @@
         controls.enableRotate = false; // strict isometric usually implies fixed rotation, but user can pan/zoom
         controls.zoomSpeed = 1.2;
         controls.panSpeed = 0.8;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(-10, 30, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        const dLight = 10;
+        directionalLight.shadow.camera.left = -dLight;
+        directionalLight.shadow.camera.right = dLight;
+        directionalLight.shadow.camera.top = dLight;
+        directionalLight.shadow.camera.bottom = -dLight;
+        scene.add(directionalLight);
 
         // 12x12 Grid Tile Plan
         // Using GridHelper for a clean grid look
@@ -56,34 +74,99 @@
 
         // Tile Materials & Geometry (From TestScene)
         const soilGeometry = new THREE.BoxGeometry(1, 0.1, 1);
-        const soilMaterial = new THREE.MeshBasicMaterial({ color: 0x8b4513 }); // SaddleBrown
+        const soilMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8b4513,
+        }); // SaddleBrown
 
         const grassTopGeometry = new THREE.BoxGeometry(1, 0.1, 1);
-        const grassMaterial = new THREE.MeshBasicMaterial({ color: 0x228b22 }); // ForestGreen
+        const grassMaterial = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        }); // ForestGreen
+
+        const pathTopGeometry = new THREE.BoxGeometry(1, 0.1, 1);
+        const pathMaterial = new THREE.MeshStandardMaterial({
+            color: 0x808080,
+        }); // Gray
 
         // Crop Geometries & Materials
+        // Stage 1 (Sprout) - Same for all
+        const sproutGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.2);
+        const sproutMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+
+        // Wheat
+        const wheatStage2Geo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
+        const wheatStage2Mat = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        });
+        const wheatStage3Geo = new THREE.CylinderGeometry(0.08, 0.08, 0.6);
+        const wheatStage3Mat = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        });
         const wheatStalkGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.6);
-        const wheatStalkMat = new THREE.MeshBasicMaterial({ color: 0xcccc00 });
+        const wheatStalkMat = new THREE.MeshStandardMaterial({
+            color: 0xcccc00,
+        });
         const wheatHeadGeo = new THREE.BoxGeometry(0.15, 0.3, 0.15);
-        const wheatHeadMat = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+        const wheatHeadMat = new THREE.MeshStandardMaterial({
+            color: 0xffd700,
+        });
 
+        // Carrot
+        const carrotStage2Geo = new THREE.ConeGeometry(0.15, 0.3, 8);
+        const carrotStage2Mat = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        });
+        const carrotStage3Geo = new THREE.ConeGeometry(0.25, 0.5, 8);
+        const carrotStage3Mat = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        });
         const carrotLeafGeo = new THREE.ConeGeometry(0.3, 0.6, 8);
-        const carrotLeafMat = new THREE.MeshBasicMaterial({ color: 0x228b22 });
+        const carrotLeafMat = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        });
         const carrotBaseGeo = new THREE.CylinderGeometry(0.1, 0.05, 0.1);
-        const carrotBaseMat = new THREE.MeshBasicMaterial({ color: 0xff8c00 });
+        const carrotBaseMat = new THREE.MeshStandardMaterial({
+            color: 0xff8c00,
+        });
 
+        // Tomato
+        const tomatoStage2Geo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
+        const tomatoStage2Mat = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        });
+        const tomatoLeafGeo = new THREE.BoxGeometry(0.2, 0.02, 0.05);
+        const tomatoStage3Geo = new THREE.DodecahedronGeometry(0.25);
+        const tomatoStage3Mat = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        });
+        const tomatoStemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
         const tomatoBushGeo = new THREE.DodecahedronGeometry(0.3);
-        const tomatoStemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
-        const tomatoPlantMat = new THREE.MeshBasicMaterial({ color: 0x228b22 });
+        const tomatoStemFinalGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
+        const tomatoPlantMat = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        });
         const tomatoFruitGeo = new THREE.SphereGeometry(0.08);
-        const tomatoFruitMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const tomatoFruitMat = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+        });
 
         const tiles = new Map<string, THREE.Object3D>();
+        const crops = new Map<
+            string,
+            {
+                mesh: THREE.Group;
+                type: string;
+                stage: number;
+                plantedAt: number;
+                lastStageUpdate: number;
+            }
+        >();
 
         const createSoilTile = (x: number, z: number) => {
             const mesh = new THREE.Mesh(soilGeometry, soilMaterial);
             mesh.position.set(x, 0.05, z);
             mesh.userData = { type: "soil" };
+            mesh.receiveShadow = true;
             return mesh;
         };
 
@@ -92,10 +175,13 @@
 
             const soilMesh = new THREE.Mesh(soilGeometry, soilMaterial);
             soilMesh.position.y = 0.05;
+            soilMesh.receiveShadow = true;
             group.add(soilMesh);
 
             const grassMesh = new THREE.Mesh(grassTopGeometry, grassMaterial);
             grassMesh.position.y = 0.15;
+            grassMesh.receiveShadow = true;
+            grassMesh.castShadow = true;
             group.add(grassMesh);
 
             group.position.set(x, 0, z);
@@ -103,46 +189,139 @@
             return group;
         };
 
-        const createCrop = (type: string, x: number, z: number) => {
+        const createPathTile = (x: number, z: number) => {
+            const group = new THREE.Group();
+
+            const soilMesh = new THREE.Mesh(soilGeometry, soilMaterial);
+            soilMesh.position.y = 0.05;
+            soilMesh.receiveShadow = true;
+            group.add(soilMesh);
+
+            const grassMesh = new THREE.Mesh(grassTopGeometry, grassMaterial);
+            grassMesh.position.y = 0.15;
+            grassMesh.receiveShadow = true;
+            grassMesh.castShadow = true;
+            group.add(grassMesh);
+
+            const pathMesh = new THREE.Mesh(pathTopGeometry, pathMaterial);
+            pathMesh.position.y = 0.25;
+            pathMesh.receiveShadow = true;
+            pathMesh.castShadow = true;
+            group.add(pathMesh);
+
+            group.position.set(x, 0, z);
+            group.userData = { type: "path" };
+            return group;
+        };
+
+        const createCrop = (
+            type: string,
+            stage: number,
+            x: number,
+            z: number,
+        ) => {
             const group = new THREE.Group();
             group.position.set(x, 0.1, z);
 
-            if (type === "wheat") {
-                const stalk = new THREE.Mesh(wheatStalkGeo, wheatStalkMat);
-                stalk.position.y = 0.3;
-                group.add(stalk);
+            const addMesh = (mesh: THREE.Mesh) => {
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            };
 
-                const head = new THREE.Mesh(wheatHeadGeo, wheatHeadMat);
-                head.position.y = 0.75;
-                group.add(head);
+            if (stage === 1) {
+                const mesh = new THREE.Mesh(sproutGeo, sproutMat);
+                mesh.position.y = 0.1;
+                addMesh(mesh);
+            } else if (type === "wheat") {
+                if (stage === 2) {
+                    const mesh = new THREE.Mesh(wheatStage2Geo, wheatStage2Mat);
+                    mesh.position.y = 0.2;
+                    addMesh(mesh);
+                } else if (stage === 3) {
+                    const mesh = new THREE.Mesh(wheatStage3Geo, wheatStage3Mat);
+                    mesh.position.y = 0.3;
+                    addMesh(mesh);
+                } else if (stage === 4) {
+                    const stalk = new THREE.Mesh(wheatStalkGeo, wheatStalkMat);
+                    stalk.position.y = 0.3;
+                    addMesh(stalk);
+
+                    const head = new THREE.Mesh(wheatHeadGeo, wheatHeadMat);
+                    head.position.y = 0.75;
+                    addMesh(head);
+                }
             } else if (type === "carrot") {
-                const leaf = new THREE.Mesh(carrotLeafGeo, carrotLeafMat);
-                leaf.position.y = 0.3;
-                group.add(leaf);
+                if (stage === 2) {
+                    const mesh = new THREE.Mesh(
+                        carrotStage2Geo,
+                        carrotStage2Mat,
+                    );
+                    mesh.position.y = 0.15;
+                    addMesh(mesh);
+                } else if (stage === 3) {
+                    const mesh = new THREE.Mesh(
+                        carrotStage3Geo,
+                        carrotStage3Mat,
+                    );
+                    mesh.position.y = 0.25;
+                    addMesh(mesh);
+                } else if (stage === 4) {
+                    const leaf = new THREE.Mesh(carrotLeafGeo, carrotLeafMat);
+                    leaf.position.y = 0.3;
+                    addMesh(leaf);
 
-                const base = new THREE.Mesh(carrotBaseGeo, carrotBaseMat);
-                base.position.y = 0.05;
-                group.add(base);
+                    const base = new THREE.Mesh(carrotBaseGeo, carrotBaseMat);
+                    base.position.y = 0.05;
+                    addMesh(base);
+                }
             } else if (type === "tomato") {
-                const bush = new THREE.Mesh(tomatoBushGeo, tomatoPlantMat);
-                bush.position.y = 0.4;
-                group.add(bush);
+                if (stage === 2) {
+                    const mesh = new THREE.Mesh(
+                        tomatoStage2Geo,
+                        tomatoStage2Mat,
+                    );
+                    mesh.position.y = 0.2;
+                    addMesh(mesh);
 
-                const stem = new THREE.Mesh(tomatoStemGeo, tomatoPlantMat);
-                stem.position.y = 0.2;
-                group.add(stem);
+                    const leaf = new THREE.Mesh(tomatoLeafGeo, tomatoStage2Mat);
+                    leaf.position.set(0.1, 0.3, 0);
+                    addMesh(leaf);
+                } else if (stage === 3) {
+                    const mesh = new THREE.Mesh(
+                        tomatoStage3Geo,
+                        tomatoStage3Mat,
+                    );
+                    mesh.position.y = 0.3;
+                    addMesh(mesh);
 
-                const f1 = new THREE.Mesh(tomatoFruitGeo, tomatoFruitMat);
-                f1.position.set(0.2, 0.4, 0.1);
-                group.add(f1);
+                    const stem = new THREE.Mesh(tomatoStemGeo, tomatoStage3Mat);
+                    stem.position.y = 0.15;
+                    addMesh(stem);
+                } else if (stage === 4) {
+                    const bush = new THREE.Mesh(tomatoBushGeo, tomatoPlantMat);
+                    bush.position.y = 0.4;
+                    addMesh(bush);
 
-                const f2 = new THREE.Mesh(tomatoFruitGeo, tomatoFruitMat);
-                f2.position.set(-0.15, 0.5, 0.2);
-                group.add(f2);
+                    const stem = new THREE.Mesh(
+                        tomatoStemFinalGeo,
+                        tomatoPlantMat,
+                    );
+                    stem.position.y = 0.2;
+                    addMesh(stem);
 
-                const f3 = new THREE.Mesh(tomatoFruitGeo, tomatoFruitMat);
-                f3.position.set(0.1, 0.3, -0.2);
-                group.add(f3);
+                    const f1 = new THREE.Mesh(tomatoFruitGeo, tomatoFruitMat);
+                    f1.position.set(0.2, 0.4, 0.1);
+                    addMesh(f1);
+
+                    const f2 = new THREE.Mesh(tomatoFruitGeo, tomatoFruitMat);
+                    f2.position.set(-0.15, 0.5, 0.2);
+                    addMesh(f2);
+
+                    const f3 = new THREE.Mesh(tomatoFruitGeo, tomatoFruitMat);
+                    f3.position.set(0.1, 0.3, -0.2);
+                    addMesh(f3);
+                }
             }
 
             return group;
@@ -200,24 +379,55 @@
                 const tile = tiles.get(key);
 
                 if (selectedSeed) {
-                    if (
-                        tile &&
-                        tile.userData.type === "soil" &&
-                        !tile.userData.hasCrop
+                    if (selectedSeed === "harvest") {
+                        if (tile && tile.userData.hasCrop) {
+                            const cropData = crops.get(key);
+                            if (cropData && cropData.stage === 4) {
+                                scene.remove(cropData.mesh);
+                                crops.delete(key);
+                                tile.userData.hasCrop = false;
+                            }
+                        }
+                    } else if (
+                        ["wheat", "carrot", "tomato"].includes(selectedSeed)
                     ) {
-                        const crop = createCrop(selectedSeed, x, z);
-                        scene.add(crop);
-                        tile.userData.hasCrop = true;
-                    }
-                } else {
-                    if (tile && tile.userData.type === "grass") {
-                        // Remove grass tile
-                        scene.remove(tile);
+                        if (
+                            tile &&
+                            tile.userData.type === "soil" &&
+                            !tile.userData.hasCrop
+                        ) {
+                            const crop = createCrop(selectedSeed, 1, x, z);
+                            scene.add(crop);
+                            tile.userData.hasCrop = true;
+                            crops.set(key, {
+                                mesh: crop,
+                                type: selectedSeed,
+                                stage: 1,
+                                plantedAt: performance.now(),
+                                lastStageUpdate: performance.now(),
+                            });
+                        }
+                    } else if (
+                        ["soil", "grass", "path"].includes(selectedSeed)
+                    ) {
+                        if (tile && !tile.userData.hasCrop) {
+                            // Only allow changing tile if no crop is present
+                            if (tile.userData.type !== selectedSeed) {
+                                scene.remove(tile);
+                                let newTile;
+                                if (selectedSeed === "soil")
+                                    newTile = createSoilTile(x, z);
+                                else if (selectedSeed === "grass")
+                                    newTile = createGrassTile(x, z);
+                                else if (selectedSeed === "path")
+                                    newTile = createPathTile(x, z);
 
-                        // Add soil tile
-                        const soilTile = createSoilTile(x, z);
-                        scene.add(soilTile);
-                        tiles.set(key, soilTile);
+                                if (newTile) {
+                                    scene.add(newTile);
+                                    tiles.set(key, newTile);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -227,6 +437,36 @@
         const animate = () => {
             frameId = requestAnimationFrame(animate);
             controls.update();
+
+            const now = performance.now();
+            crops.forEach((cropData, key) => {
+                if (cropData.stage < 4) {
+                    let growthTime = 0;
+                    if (cropData.type === "wheat") growthTime = 5000;
+                    else if (cropData.type === "carrot") growthTime = 10000;
+                    else if (cropData.type === "tomato") growthTime = 15000;
+
+                    if (now - cropData.lastStageUpdate > growthTime) {
+                        // Upgrade stage
+                        scene.remove(cropData.mesh);
+                        const [xStr, zStr] = key.split(",");
+                        const x = parseFloat(xStr);
+                        const z = parseFloat(zStr);
+
+                        cropData.stage++;
+                        cropData.lastStageUpdate = now;
+
+                        const newMesh = createCrop(
+                            cropData.type,
+                            cropData.stage,
+                            x,
+                            z,
+                        );
+                        scene.add(newMesh);
+                        cropData.mesh = newMesh;
+                    }
+                }
+            });
 
             // Raycasting
             raycaster.setFromCamera(mouse, camera);
@@ -254,6 +494,8 @@
                             highlightMesh.position.y = 0.22;
                         } else if (tile.userData.type === "soil") {
                             highlightMesh.position.y = 0.12;
+                        } else if (tile.userData.type === "path") {
+                            highlightMesh.position.y = 0.32;
                         } else {
                             highlightMesh.position.y = 0.12;
                         }
@@ -298,17 +540,38 @@
             soilMaterial.dispose();
             grassTopGeometry.dispose();
             grassMaterial.dispose();
+            pathTopGeometry.dispose();
+            pathMaterial.dispose();
 
+            sproutGeo.dispose();
+            sproutMat.dispose();
+
+            wheatStage2Geo.dispose();
+            wheatStage2Mat.dispose();
+            wheatStage3Geo.dispose();
+            wheatStage3Mat.dispose();
             wheatStalkGeo.dispose();
             wheatStalkMat.dispose();
             wheatHeadGeo.dispose();
             wheatHeadMat.dispose();
+
+            carrotStage2Geo.dispose();
+            carrotStage2Mat.dispose();
+            carrotStage3Geo.dispose();
+            carrotStage3Mat.dispose();
             carrotLeafGeo.dispose();
             carrotLeafMat.dispose();
             carrotBaseGeo.dispose();
             carrotBaseMat.dispose();
-            tomatoBushGeo.dispose();
+
+            tomatoStage2Geo.dispose();
+            tomatoStage2Mat.dispose();
+            tomatoLeafGeo.dispose();
+            tomatoStage3Geo.dispose();
+            tomatoStage3Mat.dispose();
             tomatoStemGeo.dispose();
+            tomatoBushGeo.dispose();
+            tomatoStemFinalGeo.dispose();
             tomatoPlantMat.dispose();
             tomatoFruitGeo.dispose();
             tomatoFruitMat.dispose();

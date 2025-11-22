@@ -20,40 +20,66 @@
         camera.lookAt(scene.position);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.setSize(window.innerWidth, window.innerHeight);
         container.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(-5, 15, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        const dLight = 10;
+        directionalLight.shadow.camera.left = -dLight;
+        directionalLight.shadow.camera.right = dLight;
+        directionalLight.shadow.camera.top = dLight;
+        directionalLight.shadow.camera.bottom = -dLight;
+        scene.add(directionalLight);
+
         // Ground
         const groundGeometry = new THREE.PlaneGeometry(12, 12, 12, 12);
-        const groundMaterial = new THREE.MeshBasicMaterial({
+        const groundMaterial = new THREE.MeshStandardMaterial({
             color: 0x444444,
             side: THREE.DoubleSide,
             wireframe: true,
         });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
         scene.add(ground);
 
         // Soil Tile
         const soilGeometry = new THREE.BoxGeometry(1, 0.1, 1);
-        const soilMaterial = new THREE.MeshBasicMaterial({ color: 0x8b4513 }); // SaddleBrown
+        const soilMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8b4513,
+        }); // SaddleBrown
         const soilTile = new THREE.Mesh(soilGeometry, soilMaterial);
         soilTile.position.set(-2, 0.05, 0);
+        soilTile.receiveShadow = true;
         scene.add(soilTile);
 
         // Grass Tile
         const grassTile = new THREE.Group();
         const grassSoilMesh = new THREE.Mesh(soilGeometry, soilMaterial);
         grassSoilMesh.position.y = 0.05;
+        grassSoilMesh.receiveShadow = true;
 
         const grassTopGeometry = new THREE.BoxGeometry(1, 0.1, 1);
-        const grassMaterial = new THREE.MeshBasicMaterial({ color: 0x228b22 }); // ForestGreen
+        const grassMaterial = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+        }); // ForestGreen
         const grassTopMesh = new THREE.Mesh(grassTopGeometry, grassMaterial);
         grassTopMesh.position.y = 0.15;
+        grassTopMesh.receiveShadow = true;
+        grassTopMesh.castShadow = true;
 
         grassTile.add(grassSoilMesh);
         grassTile.add(grassTopMesh);
@@ -64,14 +90,21 @@
         const pathTile = new THREE.Group();
         const pathSoilMesh = new THREE.Mesh(soilGeometry, soilMaterial);
         pathSoilMesh.position.y = 0.05;
+        pathSoilMesh.receiveShadow = true;
 
         const pathGrassMesh = new THREE.Mesh(grassTopGeometry, grassMaterial);
         pathGrassMesh.position.y = 0.15;
+        pathGrassMesh.receiveShadow = true;
+        pathGrassMesh.castShadow = true;
 
         const pathTopGeometry = new THREE.BoxGeometry(1, 0.1, 1);
-        const pathMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 }); // Gray
+        const pathMaterial = new THREE.MeshStandardMaterial({
+            color: 0x808080,
+        }); // Gray
         const pathTopMesh = new THREE.Mesh(pathTopGeometry, pathMaterial);
         pathTopMesh.position.y = 0.25;
+        pathTopMesh.receiveShadow = true;
+        pathTopMesh.castShadow = true;
 
         pathTile.add(pathSoilMesh);
         pathTile.add(pathGrassMesh);
@@ -85,9 +118,11 @@
 
         const createSoilBase = (x: number, z: number) => {
             const geo = new THREE.BoxGeometry(1, 0.1, 1);
-            const mat = new THREE.MeshBasicMaterial({ color: 0x8b4513 });
+            const mat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(x, 0.05, z);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
             cropsGroup.add(mesh);
             return { geo, mat };
         };
@@ -101,142 +136,148 @@
             const group = new THREE.Group();
             group.position.set(x, 0.1, z); // On top of soil (0.1 height)
 
+            const addMesh = (mesh: THREE.Mesh) => {
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            };
+
             // Stage 1 (Sprout) - Same for all
             if (stage === 1) {
                 const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.2);
-                const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const mat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
                 const mesh = new THREE.Mesh(geo, mat);
                 mesh.position.y = 0.1;
-                group.add(mesh);
+                addMesh(mesh);
             } else if (type === "wheat") {
                 if (stage === 2) {
                     const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
-                    const mat = new THREE.MeshBasicMaterial({
+                    const mat = new THREE.MeshStandardMaterial({
                         color: 0x228b22,
                     });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.y = 0.2;
-                    group.add(mesh);
+                    addMesh(mesh);
                 } else if (stage === 3) {
                     const geo = new THREE.CylinderGeometry(0.08, 0.08, 0.6);
-                    const mat = new THREE.MeshBasicMaterial({
+                    const mat = new THREE.MeshStandardMaterial({
                         color: 0x228b22,
                     });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.y = 0.3;
-                    group.add(mesh);
+                    addMesh(mesh);
                 } else if (stage === 4) {
                     const stalkGeo = new THREE.CylinderGeometry(
                         0.05,
                         0.05,
                         0.6,
                     );
-                    const stalkMat = new THREE.MeshBasicMaterial({
+                    const stalkMat = new THREE.MeshStandardMaterial({
                         color: 0xcccc00,
                     });
                     const stalk = new THREE.Mesh(stalkGeo, stalkMat);
                     stalk.position.y = 0.3;
-                    group.add(stalk);
+                    addMesh(stalk);
 
                     const headGeo = new THREE.BoxGeometry(0.15, 0.3, 0.15);
-                    const headMat = new THREE.MeshBasicMaterial({
+                    const headMat = new THREE.MeshStandardMaterial({
                         color: 0xffd700,
                     });
                     const head = new THREE.Mesh(headGeo, headMat);
                     head.position.y = 0.75;
-                    group.add(head);
+                    addMesh(head);
                 }
             } else if (type === "carrot") {
                 if (stage === 2) {
                     const geo = new THREE.ConeGeometry(0.15, 0.3, 8);
-                    const mat = new THREE.MeshBasicMaterial({
+                    const mat = new THREE.MeshStandardMaterial({
                         color: 0x228b22,
                     });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.y = 0.15;
-                    group.add(mesh);
+                    addMesh(mesh);
                 } else if (stage === 3) {
                     const geo = new THREE.ConeGeometry(0.25, 0.5, 8);
-                    const mat = new THREE.MeshBasicMaterial({
+                    const mat = new THREE.MeshStandardMaterial({
                         color: 0x228b22,
                     });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.y = 0.25;
-                    group.add(mesh);
+                    addMesh(mesh);
                 } else if (stage === 4) {
                     const geo = new THREE.ConeGeometry(0.3, 0.6, 8);
-                    const mat = new THREE.MeshBasicMaterial({
+                    const mat = new THREE.MeshStandardMaterial({
                         color: 0x228b22,
                     });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.y = 0.3;
-                    group.add(mesh);
+                    addMesh(mesh);
 
                     const baseGeo = new THREE.CylinderGeometry(0.1, 0.05, 0.1);
-                    const baseMat = new THREE.MeshBasicMaterial({
+                    const baseMat = new THREE.MeshStandardMaterial({
                         color: 0xff8c00,
                     });
                     const base = new THREE.Mesh(baseGeo, baseMat);
                     base.position.y = 0.05;
-                    group.add(base);
+                    addMesh(base);
                 }
             } else if (type === "tomato") {
                 if (stage === 2) {
                     const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
-                    const mat = new THREE.MeshBasicMaterial({
+                    const mat = new THREE.MeshStandardMaterial({
                         color: 0x228b22,
                     });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.y = 0.2;
-                    group.add(mesh);
+                    addMesh(mesh);
 
                     const leafGeo = new THREE.BoxGeometry(0.2, 0.02, 0.05);
                     const leaf = new THREE.Mesh(leafGeo, mat);
                     leaf.position.set(0.1, 0.3, 0);
-                    group.add(leaf);
+                    addMesh(leaf);
                 } else if (stage === 3) {
                     const geo = new THREE.DodecahedronGeometry(0.25);
-                    const mat = new THREE.MeshBasicMaterial({
+                    const mat = new THREE.MeshStandardMaterial({
                         color: 0x228b22,
                     });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.y = 0.3;
-                    group.add(mesh);
+                    addMesh(mesh);
 
                     const stemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
                     const stem = new THREE.Mesh(stemGeo, mat);
                     stem.position.y = 0.15;
-                    group.add(stem);
+                    addMesh(stem);
                 } else if (stage === 4) {
                     const geo = new THREE.DodecahedronGeometry(0.3);
-                    const mat = new THREE.MeshBasicMaterial({
+                    const mat = new THREE.MeshStandardMaterial({
                         color: 0x228b22,
                     });
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.y = 0.4;
-                    group.add(mesh);
+                    addMesh(mesh);
 
                     const stemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
                     const stem = new THREE.Mesh(stemGeo, mat);
                     stem.position.y = 0.2;
-                    group.add(stem);
+                    addMesh(stem);
 
                     const fruitGeo = new THREE.SphereGeometry(0.08);
-                    const fruitMat = new THREE.MeshBasicMaterial({
+                    const fruitMat = new THREE.MeshStandardMaterial({
                         color: 0xff0000,
                     });
 
                     const f1 = new THREE.Mesh(fruitGeo, fruitMat);
                     f1.position.set(0.2, 0.4, 0.1);
-                    group.add(f1);
+                    addMesh(f1);
 
                     const f2 = new THREE.Mesh(fruitGeo, fruitMat);
                     f2.position.set(-0.15, 0.5, 0.2);
-                    group.add(f2);
+                    addMesh(f2);
 
                     const f3 = new THREE.Mesh(fruitGeo, fruitMat);
                     f3.position.set(0.1, 0.3, -0.2);
-                    group.add(f3);
+                    addMesh(f3);
                 }
             }
 

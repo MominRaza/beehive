@@ -5,9 +5,13 @@
     }>();
 
     const seeds = [
+        { id: "soil", name: "Soil", color: "#8b4513" },
+        { id: "grass", name: "Grass", color: "#228b22" },
+        { id: "path", name: "Path", color: "#808080" },
         { id: "wheat", name: "Wheat", color: "#ffd700" },
         { id: "carrot", name: "Carrot", color: "#ff8c00" },
         { id: "tomato", name: "Tomato", color: "#ff0000" },
+        { id: "harvest", name: "Harvest", color: "#ff69b4" },
     ];
 </script>
 
