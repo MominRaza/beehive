@@ -16,10 +16,10 @@ export abstract class FruitTree extends Tree {
         return super.harvest(); // Chop down if not fruiting or if user wants wood (logic depends on tool, but here we simplify)
     }
 
-    abstract getFruitName(): string;
-    abstract getFruitColor(): number;
+    protected abstract getFruitName(): string;
+    protected abstract getFruitColor(): number;
 
-    updateMesh() {
+    protected updateMesh() {
         this.mesh.clear();
 
         // Trunk

@@ -3,7 +3,7 @@ import { Structure } from './Structure';
 
 export class Well extends Structure {
     constructor(x: number, z: number) {
-        super(x, z, 1, 1);
+        super(x, z);
         this.buildWell();
     }
 

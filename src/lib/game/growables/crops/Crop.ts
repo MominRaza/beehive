@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { GrowableObject } from '../GrowableObject';
 
 export abstract class Crop extends GrowableObject {
@@ -6,10 +7,12 @@ export abstract class Crop extends GrowableObject {
         this.mesh.position.y = 0.1;
     }
 
-    harvest() {
-        // Logic to remove object is handled by the scene manager usually,
-        // but we can mark it as harvested or return true.
-        // For now, let's assume the scene calls this and then removes it.
-        return true;
+    protected updateMesh(): void {
+        this.mesh.clear();
+        let geometry, material;
+        geometry = new THREE.SphereGeometry(0.05);
+        material = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+        const mesh = new THREE.Mesh(geometry, material);
+        this.mesh.add(mesh);
     }
 }

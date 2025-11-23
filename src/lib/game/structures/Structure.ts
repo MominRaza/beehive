@@ -9,8 +9,4 @@ export abstract class Structure extends GameObject {
         this.width = width;
         this.depth = depth;
     }
-
-    update(time: number): void {
-        // Static objects generally don't update, but we can override if needed
-    }
 }

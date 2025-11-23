@@ -1,10 +1,10 @@
 import { FruitTree } from './FruitTree';
 
 export class Apple extends FruitTree {
-    getFruitName(): string {
+    protected getFruitName(): string {
         return "Apple";
     }
-    getFruitColor(): number {
+    protected getFruitColor(): number {
         return 0xFF0000; // Red
     }
 }

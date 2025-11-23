@@ -14,8 +14,4 @@ export abstract class Tile extends GameObject {
         soil.position.y = -0.1; // Slightly below 0
         this.mesh.add(soil);
     }
-
-    update(time: number): void {
-        // Tiles generally don't update
-    }
 }

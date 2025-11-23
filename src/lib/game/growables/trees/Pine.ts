@@ -7,7 +7,7 @@ export class Pine extends Tree {
         this.updateMesh();
     }
 
-    updateMesh() {
+    protected updateMesh() {
         this.mesh.clear();
 
         // Trunk

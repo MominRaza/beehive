@@ -7,17 +7,13 @@ export class Tomato extends Crop {
         this.updateMesh();
     }
 
-    updateMesh() {
+    protected updateMesh() {
+        if (this.currentStage === 0) return super.updateMesh();
+
         this.mesh.clear();
         let geometry, material;
 
-        if (this.currentStage === 0) {
-            // Seeds
-            geometry = new THREE.SphereGeometry(0.05);
-            material = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-            const mesh = new THREE.Mesh(geometry, material);
-            this.mesh.add(mesh);
-        } else if (this.currentStage === 1) {
+        if (this.currentStage === 1) {
             // Sprout
             geometry = new THREE.CylinderGeometry(0.02, 0.02, 0.2);
             material = new THREE.MeshStandardMaterial({ color: 0x00FF00 });

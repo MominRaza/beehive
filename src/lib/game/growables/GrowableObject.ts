@@ -1,10 +1,10 @@
 import { GameObject } from '../GameObject';
 
 export abstract class GrowableObject extends GameObject {
-    public currentStage: number = 0;
-    public maxStage: number;
-    public growthDuration: number;
-    public lastUpdateTimestamp: number;
+    protected currentStage: number = 0;
+    protected maxStage: number;
+    private growthDuration: number;
+    private lastUpdateTimestamp: number;
 
     constructor(x: number, z: number, maxStage: number, growthDuration: number) {
         super(x, z);
@@ -13,7 +13,7 @@ export abstract class GrowableObject extends GameObject {
         this.lastUpdateTimestamp = Date.now();
     }
 
-    checkGrowth(time: number) {
+    private checkGrowth(time: number) {
         if (this.currentStage < this.maxStage) {
             if (time - this.lastUpdateTimestamp > this.growthDuration) {
                 this.currentStage++;
@@ -27,5 +27,5 @@ export abstract class GrowableObject extends GameObject {
         this.checkGrowth(time);
     }
 
-    abstract updateMesh(): void;
+    protected abstract updateMesh(): void;
 }

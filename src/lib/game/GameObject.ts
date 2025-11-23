@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
 export abstract class GameObject {
-    public x: number;
-    public z: number;
-    public mesh: THREE.Group;
+    private x: number;
+    private z: number;
+    protected mesh: THREE.Group;
 
     constructor(x: number, z: number) {
         this.x = x;
@@ -20,5 +20,7 @@ export abstract class GameObject {
         scene.remove(this.mesh);
     }
 
-    abstract update(time: number): void;
+    update(time: number): void {
+        // Default implementation does nothing
+    };
 }
