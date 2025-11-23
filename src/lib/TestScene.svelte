@@ -43,13 +43,7 @@
     function spawn(obj: GameObject) {
         obj.addToScene(scene);
         gameObjects.push(obj);
-
-        obj.mesh.traverse((child: THREE.Object3D) => {
-            if (child instanceof THREE.Mesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
-        });
+        obj.enableShadows();
     }
 
     function spawnSequence(
@@ -58,11 +52,13 @@
         startX: number = 0,
     ) {
         const temp = new ClassRef(0, 0);
-        const maxStage = temp.maxStage;
         const isCrop = temp instanceof Crop;
 
-        for (let i = 0; i <= maxStage; i++) {
-            const x = startX + i * 2;
+        let i = 0;
+        while (true) {
+            const x = startX + i * (isCrop ? 1 : 2);
+            const obj = new ClassRef(x, z);
+            if (!obj.setCurrentStage(i)) break;
 
             if (isCrop) {
                 spawn(new Soil(x, z));
@@ -70,10 +66,9 @@
                 spawn(new Grass(x, z));
             }
 
-            const obj = new ClassRef(x, z);
-            obj.currentStage = i;
-            obj.updateMesh();
             spawn(obj);
+
+            i++;
         }
     }
 
@@ -85,34 +80,37 @@
         gameObjects = [];
 
         if (selectedType === "All") {
+            let currentZ = -6;
             // Tiles
-            spawn(new Soil(-4, -9));
-            spawn(new Grass(-2, -9));
-            spawn(new Path(0, -9));
+            spawn(new Soil(-4, currentZ));
+            spawn(new Grass(-2, currentZ));
+            spawn(new Path(0, currentZ));
 
             // Structures
-            spawn(new Grass(2, -9));
-            spawn(new Grass(3, -9));
-            spawn(new Grass(2, -8));
-            spawn(new Grass(3, -8));
-            spawn(new House(2.5, -8.5));
-            spawn(new Grass(5, -8));
-            spawn(new Well(5, -8));
+            spawn(new Grass(2, currentZ));
+            spawn(new Grass(3, currentZ));
+            currentZ++;
+            spawn(new Grass(2, currentZ));
+            spawn(new Grass(3, currentZ));
+            spawn(new House(2.5, currentZ - 0.5));
+            spawn(new Grass(5, currentZ));
+            spawn(new Well(5, currentZ));
 
             // Sequences
-            let currentZ = -6;
+            currentZ++;
             spawnSequence(Wheat, currentZ, -4);
-            currentZ += 2;
+            currentZ++;
             spawnSequence(Carrot, currentZ, -4);
-            currentZ += 2;
+            currentZ++;
             spawnSequence(Tomato, currentZ, -4);
-            currentZ += 3;
+
+            currentZ += 2;
             spawnSequence(Pine, currentZ, -4);
-            currentZ += 3;
+            currentZ += 2;
             spawnSequence(Oak, currentZ, -4);
-            currentZ += 3;
+            currentZ += 2;
             spawnSequence(Apple, currentZ, -4);
-            currentZ += 3;
+            currentZ += 2;
             spawnSequence(Mango, currentZ, -4);
         } else if (selectedType === "Tiles") {
             spawn(new Soil(-2, 0));
@@ -165,7 +163,7 @@
             0.1,
             1000,
         );
-        camera.position.set(-5, 5, -5);
+        camera.position.set(-5, 5, 0);
         camera.lookAt(scene.position);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });

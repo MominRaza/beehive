@@ -23,6 +23,15 @@ export abstract class GrowableObject extends GameObject {
         }
     }
 
+    setCurrentStage(stage: number): boolean {
+        if (stage >= 0 && stage <= this.maxStage) {
+            this.currentStage = stage;
+            this.updateMesh();
+            return true;
+        }
+        return false;
+    }
+
     update(time: number): void {
         this.checkGrowth(time);
     }

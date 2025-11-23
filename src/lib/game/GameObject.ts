@@ -20,6 +20,15 @@ export abstract class GameObject {
         scene.remove(this.mesh);
     }
 
+    enableShadows({ castShadow = true, receiveShadow = true } = {}) {
+        this.mesh.traverse((child: THREE.Object3D) => {
+            if (child instanceof THREE.Mesh) {
+                child.castShadow = castShadow;
+                child.receiveShadow = receiveShadow;
+            }
+        });
+    }
+
     update(time: number): void {
         // Default implementation does nothing
     };
