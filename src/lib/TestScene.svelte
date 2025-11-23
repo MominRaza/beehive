@@ -1,22 +1,171 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
+    import { onMount } from "svelte";
     import * as THREE from "three";
     import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+    import type { GameObject } from "./game/GameObject";
+    import { GrowableObject } from "./game/growables/GrowableObject";
+    import { Crop } from "./game/growables/crops/Crop";
+    import { House } from "./game/structures/House";
+    import { Well } from "./game/structures/Well";
+    import { Soil } from "./game/tiles/Soil";
+    import { Grass } from "./game/tiles/Grass";
+    import { Path } from "./game/tiles/Path";
+    import { Wheat } from "./game/growables/crops/Wheat";
+    import { Carrot } from "./game/growables/crops/Carrot";
+    import { Tomato } from "./game/growables/crops/Tomato";
+    import { Pine } from "./game/growables/trees/Pine";
+    import { Oak } from "./game/growables/trees/Oak";
+    import { Apple } from "./game/growables/trees/fruitTrees/Apple";
+    import { Mango } from "./game/growables/trees/fruitTrees/Mango";
 
-    let { onBack } = $props<{ onBack: () => void }>();
+    let { onBack }: { onBack: () => void } = $props();
 
     let container: HTMLDivElement;
     let frameId: number;
+    let gameObjects: GameObject[] = [];
+    let scene: THREE.Scene;
+    let mounted = $state(false);
+    let selectedType = $state(localStorage.getItem("selectedType") || "All");
+
+    const objectTypes = [
+        "All",
+        "Tiles",
+        "Structures",
+        "Wheat",
+        "Carrot",
+        "Tomato",
+        "Pine",
+        "Oak",
+        "Apple",
+        "Mango",
+    ];
+
+    function spawn(obj: GameObject) {
+        obj.addToScene(scene);
+        gameObjects.push(obj);
+
+        obj.mesh.traverse((child: THREE.Object3D) => {
+            if (child instanceof THREE.Mesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+    }
+
+    function spawnSequence(
+        ClassRef: new (x: number, z: number) => GrowableObject,
+        z: number,
+        startX: number = 0,
+    ) {
+        const temp = new ClassRef(0, 0);
+        const maxStage = temp.maxStage;
+        const isCrop = temp instanceof Crop;
+
+        for (let i = 0; i <= maxStage; i++) {
+            const x = startX + i * 2;
+
+            if (isCrop) {
+                spawn(new Soil(x, z));
+            } else {
+                spawn(new Grass(x, z));
+            }
+
+            const obj = new ClassRef(x, z);
+            obj.currentStage = i;
+            obj.updateMesh();
+            spawn(obj);
+        }
+    }
+
+    function renderScene() {
+        if (!scene) return;
+
+        // Cleanup
+        gameObjects.forEach((obj) => obj.removeFromScene(scene));
+        gameObjects = [];
+
+        if (selectedType === "All") {
+            // Tiles
+            spawn(new Soil(-4, -9));
+            spawn(new Grass(-2, -9));
+            spawn(new Path(0, -9));
+
+            // Structures
+            spawn(new Grass(2, -9));
+            spawn(new Grass(3, -9));
+            spawn(new Grass(2, -8));
+            spawn(new Grass(3, -8));
+            spawn(new House(2.5, -8.5));
+            spawn(new Grass(5, -8));
+            spawn(new Well(5, -8));
+
+            // Sequences
+            let currentZ = -6;
+            spawnSequence(Wheat, currentZ, -4);
+            currentZ += 2;
+            spawnSequence(Carrot, currentZ, -4);
+            currentZ += 2;
+            spawnSequence(Tomato, currentZ, -4);
+            currentZ += 3;
+            spawnSequence(Pine, currentZ, -4);
+            currentZ += 3;
+            spawnSequence(Oak, currentZ, -4);
+            currentZ += 3;
+            spawnSequence(Apple, currentZ, -4);
+            currentZ += 3;
+            spawnSequence(Mango, currentZ, -4);
+        } else if (selectedType === "Tiles") {
+            spawn(new Soil(-2, 0));
+            spawn(new Grass(0, 0));
+            spawn(new Path(2, 0));
+        } else if (selectedType === "Structures") {
+            spawn(new Grass(-2, 0));
+            spawn(new Grass(-1, 0));
+            spawn(new Grass(-2, 1));
+            spawn(new Grass(-1, 1));
+            spawn(new House(-1.5, 0.5));
+
+            spawn(new Grass(2, 0));
+            spawn(new Well(2, 0));
+        } else {
+            // Individual sequences
+            const map: Record<string, any> = {
+                Wheat: Wheat,
+                Carrot: Carrot,
+                Tomato: Tomato,
+                Pine: Pine,
+                Oak: Oak,
+                Apple: Apple,
+                Mango: Mango,
+            };
+            const ClassRef = map[selectedType];
+            if (ClassRef) {
+                spawnSequence(ClassRef, 0, -2); // Center it a bit
+            }
+        }
+    }
+
+    $effect(() => {
+        localStorage.setItem("selectedType", selectedType);
+    });
+
+    $effect(() => {
+        if (mounted) {
+            renderScene();
+        }
+    });
 
     onMount(() => {
-        const scene = new THREE.Scene();
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
+
         const camera = new THREE.PerspectiveCamera(
             75,
             window.innerWidth / window.innerHeight,
             0.1,
             1000,
         );
-        camera.position.set(5, 5, 5);
+        camera.position.set(-5, 5, -5);
         camera.lookAt(scene.position);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -44,530 +193,16 @@
         directionalLight.shadow.camera.bottom = -dLight;
         scene.add(directionalLight);
 
-        // Ground
-        const groundGeometry = new THREE.PlaneGeometry(12, 12, 12, 12);
-        const groundMaterial = new THREE.MeshStandardMaterial({
-            color: 0x444444,
-            side: THREE.DoubleSide,
-            wireframe: true,
-        });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        scene.add(ground);
+        const gridHelper = new THREE.GridHelper(20, 20);
+        scene.add(gridHelper);
 
-        // Soil Tile
-        const soilGeometry = new THREE.BoxGeometry(1, 0.1, 1);
-        const soilMaterial = new THREE.MeshStandardMaterial({
-            color: 0x8b4513,
-        }); // SaddleBrown
-        const soilTile = new THREE.Mesh(soilGeometry, soilMaterial);
-        soilTile.position.set(-2, 0.05, 6);
-        soilTile.receiveShadow = true;
-        scene.add(soilTile);
-
-        // Grass Tile
-        const grassTile = new THREE.Group();
-        const grassSoilMesh = new THREE.Mesh(soilGeometry, soilMaterial);
-        grassSoilMesh.position.y = 0.05;
-        grassSoilMesh.receiveShadow = true;
-
-        const grassTopGeometry = new THREE.BoxGeometry(1, 0.1, 1);
-        const grassMaterial = new THREE.MeshStandardMaterial({
-            color: 0x228b22,
-        }); // ForestGreen
-        const grassTopMesh = new THREE.Mesh(grassTopGeometry, grassMaterial);
-        grassTopMesh.position.y = 0.15;
-        grassTopMesh.receiveShadow = true;
-        grassTopMesh.castShadow = true;
-
-        grassTile.add(grassSoilMesh);
-        grassTile.add(grassTopMesh);
-        grassTile.position.x = 0;
-        grassTile.position.z = 6;
-        scene.add(grassTile);
-
-        // Path Tile
-        const pathTile = new THREE.Group();
-        const pathSoilMesh = new THREE.Mesh(soilGeometry, soilMaterial);
-        pathSoilMesh.position.y = 0.05;
-        pathSoilMesh.receiveShadow = true;
-
-        const pathGrassMesh = new THREE.Mesh(grassTopGeometry, grassMaterial);
-        pathGrassMesh.position.y = 0.15;
-        pathGrassMesh.receiveShadow = true;
-        pathGrassMesh.castShadow = true;
-
-        const pathTopGeometry = new THREE.BoxGeometry(1, 0.1, 1);
-        const pathMaterial = new THREE.MeshStandardMaterial({
-            color: 0x808080,
-        }); // Gray
-        const pathTopMesh = new THREE.Mesh(pathTopGeometry, pathMaterial);
-        pathTopMesh.position.y = 0.25;
-        pathTopMesh.receiveShadow = true;
-        pathTopMesh.castShadow = true;
-
-        pathTile.add(pathSoilMesh);
-        pathTile.add(pathGrassMesh);
-        pathTile.add(pathTopMesh);
-        pathTile.position.x = 2;
-        pathTile.position.z = 6;
-        scene.add(pathTile);
-
-        // --- Crops Display ---
-        const cropsGroup = new THREE.Group();
-        scene.add(cropsGroup);
-
-        const createSoilBase = (x: number, z: number) => {
-            const geo = new THREE.BoxGeometry(1, 0.1, 1);
-            const mat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(x, 0.05, z);
-            mesh.receiveShadow = true;
-            mesh.castShadow = true;
-            cropsGroup.add(mesh);
-            return { geo, mat };
-        };
-
-        const createGrassBase = (x: number, z: number) => {
-            const group = new THREE.Group();
-
-            // Soil part
-            const soilGeo = new THREE.BoxGeometry(1, 0.1, 1);
-            const soilMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-            const soilMesh = new THREE.Mesh(soilGeo, soilMat);
-            soilMesh.position.y = 0.05;
-            soilMesh.receiveShadow = true;
-            group.add(soilMesh);
-
-            // Grass top part
-            const grassGeo = new THREE.BoxGeometry(1, 0.1, 1);
-            const grassMat = new THREE.MeshStandardMaterial({
-                color: 0x228b22,
-            });
-            const grassMesh = new THREE.Mesh(grassGeo, grassMat);
-            grassMesh.position.y = 0.15;
-            grassMesh.receiveShadow = true;
-            grassMesh.castShadow = true;
-            group.add(grassMesh);
-
-            group.position.set(x, 0, z);
-            cropsGroup.add(group);
-            return group;
-        };
-
-        const createCrop = (
-            type:
-                | "wheat"
-                | "carrot"
-                | "tomato"
-                | "pine"
-                | "oak"
-                | "apple"
-                | "mango",
-            stage: 1 | 2 | 3 | 4 | 5,
-            x: number,
-            z: number,
-        ) => {
-            const group = new THREE.Group();
-            const isTree = ["pine", "oak", "apple", "mango"].includes(type);
-            const y = isTree ? 0.2 : 0.1;
-            group.position.set(x, y, z);
-
-            const addMesh = (mesh: THREE.Mesh) => {
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                group.add(mesh);
-            };
-
-            // Stage 1 (Sprout) - Same for all
-            if (stage === 1) {
-                const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.2);
-                const mat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.y = 0.1;
-                addMesh(mesh);
-            } else if (type === "wheat") {
-                if (stage === 2) {
-                    const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: 0x228b22,
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.2;
-                    addMesh(mesh);
-                } else if (stage === 3) {
-                    const geo = new THREE.CylinderGeometry(0.08, 0.08, 0.6);
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: 0x228b22,
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.3;
-                    addMesh(mesh);
-                } else if (stage === 4) {
-                    const stalkGeo = new THREE.CylinderGeometry(
-                        0.05,
-                        0.05,
-                        0.6,
-                    );
-                    const stalkMat = new THREE.MeshStandardMaterial({
-                        color: 0xcccc00,
-                    });
-                    const stalk = new THREE.Mesh(stalkGeo, stalkMat);
-                    stalk.position.y = 0.3;
-                    addMesh(stalk);
-
-                    const headGeo = new THREE.BoxGeometry(0.15, 0.3, 0.15);
-                    const headMat = new THREE.MeshStandardMaterial({
-                        color: 0xffd700,
-                    });
-                    const head = new THREE.Mesh(headGeo, headMat);
-                    head.position.y = 0.75;
-                    addMesh(head);
-                }
-            } else if (type === "carrot") {
-                if (stage === 2) {
-                    const geo = new THREE.ConeGeometry(0.15, 0.3, 8);
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: 0x228b22,
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.15;
-                    addMesh(mesh);
-                } else if (stage === 3) {
-                    const geo = new THREE.ConeGeometry(0.25, 0.5, 8);
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: 0x228b22,
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.25;
-                    addMesh(mesh);
-                } else if (stage === 4) {
-                    const geo = new THREE.ConeGeometry(0.3, 0.6, 8);
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: 0x228b22,
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.3;
-                    addMesh(mesh);
-
-                    const baseGeo = new THREE.CylinderGeometry(0.1, 0.05, 0.1);
-                    const baseMat = new THREE.MeshStandardMaterial({
-                        color: 0xff8c00,
-                    });
-                    const base = new THREE.Mesh(baseGeo, baseMat);
-                    base.position.y = 0.05;
-                    addMesh(base);
-                }
-            } else if (type === "tomato") {
-                if (stage === 2) {
-                    const geo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: 0x228b22,
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.2;
-                    addMesh(mesh);
-
-                    const leafGeo = new THREE.BoxGeometry(0.2, 0.02, 0.05);
-                    const leaf = new THREE.Mesh(leafGeo, mat);
-                    leaf.position.set(0.1, 0.3, 0);
-                    addMesh(leaf);
-                } else if (stage === 3) {
-                    const geo = new THREE.DodecahedronGeometry(0.25);
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: 0x228b22,
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.3;
-                    addMesh(mesh);
-
-                    const stemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
-                    const stem = new THREE.Mesh(stemGeo, mat);
-                    stem.position.y = 0.15;
-                    addMesh(stem);
-                } else if (stage === 4) {
-                    const geo = new THREE.DodecahedronGeometry(0.3);
-                    const mat = new THREE.MeshStandardMaterial({
-                        color: 0x228b22,
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.4;
-                    addMesh(mesh);
-
-                    const stemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.4);
-                    const stem = new THREE.Mesh(stemGeo, mat);
-                    stem.position.y = 0.2;
-                    addMesh(stem);
-
-                    const fruitGeo = new THREE.SphereGeometry(0.08);
-                    const fruitMat = new THREE.MeshStandardMaterial({
-                        color: 0xff0000,
-                    });
-
-                    const f1 = new THREE.Mesh(fruitGeo, fruitMat);
-                    f1.position.set(0.2, 0.4, 0.1);
-                    addMesh(f1);
-
-                    const f2 = new THREE.Mesh(fruitGeo, fruitMat);
-                    f2.position.set(-0.15, 0.5, 0.2);
-                    addMesh(f2);
-
-                    const f3 = new THREE.Mesh(fruitGeo, fruitMat);
-                    f3.position.set(0.1, 0.3, -0.2);
-                    addMesh(f3);
-                }
-            } else if (type === "pine") {
-                const mat = new THREE.MeshStandardMaterial({ color: 0x2e8b57 }); // SeaGreen
-                const trunkMat = new THREE.MeshStandardMaterial({
-                    color: 0x8b4513,
-                });
-
-                if (stage === 2) {
-                    const geo = new THREE.ConeGeometry(0.15, 0.4, 8);
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.2;
-                    addMesh(mesh);
-                } else if (stage === 3) {
-                    const trunkGeo = new THREE.CylinderGeometry(
-                        0.05,
-                        0.05,
-                        0.3,
-                    );
-                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                    trunk.position.y = 0.15;
-                    addMesh(trunk);
-
-                    const foliageGeo = new THREE.ConeGeometry(0.25, 0.6, 8);
-                    const foliage = new THREE.Mesh(foliageGeo, mat);
-                    foliage.position.y = 0.45;
-                    addMesh(foliage);
-                } else if (stage === 4) {
-                    const trunkGeo = new THREE.CylinderGeometry(
-                        0.08,
-                        0.08,
-                        0.4,
-                    );
-                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                    trunk.position.y = 0.2;
-                    addMesh(trunk);
-
-                    const foliage1Geo = new THREE.ConeGeometry(0.35, 0.8, 8);
-                    const foliage1 = new THREE.Mesh(foliage1Geo, mat);
-                    foliage1.position.y = 0.6;
-                    addMesh(foliage1);
-
-                    const foliage2Geo = new THREE.ConeGeometry(0.25, 0.6, 8);
-                    const foliage2 = new THREE.Mesh(foliage2Geo, mat);
-                    foliage2.position.y = 1.0;
-                    addMesh(foliage2);
-                }
-            } else if (type === "oak" || type === "apple" || type === "mango") {
-                const mat = new THREE.MeshStandardMaterial({ color: 0x228b22 }); // ForestGreen
-                const trunkMat = new THREE.MeshStandardMaterial({
-                    color: 0x8b4513,
-                });
-
-                if (stage === 2) {
-                    const geo = new THREE.DodecahedronGeometry(0.2);
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = 0.2;
-                    addMesh(mesh);
-                } else if (stage === 3) {
-                    const trunkGeo = new THREE.CylinderGeometry(
-                        0.05,
-                        0.05,
-                        0.3,
-                    );
-                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                    trunk.position.y = 0.15;
-                    addMesh(trunk);
-
-                    const foliageGeo = new THREE.DodecahedronGeometry(0.3);
-                    const foliage = new THREE.Mesh(foliageGeo, mat);
-                    foliage.position.y = 0.45;
-                    addMesh(foliage);
-                } else if (stage >= 4) {
-                    const trunkGeo = new THREE.CylinderGeometry(
-                        0.08,
-                        0.08,
-                        0.5,
-                    );
-                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                    trunk.position.y = 0.25;
-                    addMesh(trunk);
-
-                    const foliageGeo = new THREE.DodecahedronGeometry(0.4);
-                    const foliage = new THREE.Mesh(foliageGeo, mat);
-                    foliage.position.y = 0.65;
-                    addMesh(foliage);
-
-                    if (stage === 5) {
-                        const fruitGeo = new THREE.SphereGeometry(0.08);
-                        const fruitColor =
-                            type === "apple" ? 0xff0000 : 0xffd700; // Red or Gold/Yellow
-                        const fruitMat = new THREE.MeshStandardMaterial({
-                            color: fruitColor,
-                        });
-
-                        const positions = [
-                            [0.25, 0.6, 0.15],
-                            [-0.2, 0.7, 0.2],
-                            [0.1, 0.5, -0.25],
-                            [-0.15, 0.8, -0.1],
-                        ];
-
-                        positions.forEach((pos) => {
-                            const fruit = new THREE.Mesh(fruitGeo, fruitMat);
-                            fruit.position.set(pos[0], pos[1], pos[2]);
-                            addMesh(fruit);
-                        });
-                    }
-                }
-            }
-
-            cropsGroup.add(group);
-        };
-
-        const createHouse = (x: number, z: number) => {
-            const group = new THREE.Group();
-            group.position.set(x, 0, z);
-
-            // Base (Walls)
-            const baseGeo = new THREE.BoxGeometry(1.8, 1.0, 1.8);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0xf5f5dc }); // Beige
-            const base = new THREE.Mesh(baseGeo, baseMat);
-            base.position.y = 0.5 + 0.1; // 0.5 (half height) + 0.1 (ground offset)
-            base.castShadow = true;
-            base.receiveShadow = true;
-            group.add(base);
-
-            // Roof
-            const roofGeo = new THREE.ConeGeometry(1.3, 0.6, 4);
-            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b0000 }); // DarkRed
-            const roof = new THREE.Mesh(roofGeo, roofMat);
-            roof.position.y = 1.0 + 0.3 + 0.1; // 1.0 (base height) + 0.3 (half roof height) + 0.1
-            roof.rotation.y = Math.PI / 4;
-            roof.castShadow = true;
-            roof.receiveShadow = true;
-            group.add(roof);
-
-            // Door
-            const doorGeo = new THREE.BoxGeometry(0.4, 0.6, 0.05);
-            const doorMat = new THREE.MeshStandardMaterial({ color: 0x4a3c31 }); // Dark Wood
-            const door = new THREE.Mesh(doorGeo, doorMat);
-            door.position.set(0, 0.4, 0.9); // Front face
-            door.castShadow = true;
-            door.receiveShadow = true;
-            group.add(door);
-
-            cropsGroup.add(group);
-        };
-
-        const createWell = (x: number, z: number) => {
-            const group = new THREE.Group();
-            group.position.set(x, 0, z);
-
-            // Base
-            const baseGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.4, 8);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x808080 }); // Gray Stone
-            const base = new THREE.Mesh(baseGeo, baseMat);
-            base.position.y = 0.2 + 0.1;
-            base.castShadow = true;
-            base.receiveShadow = true;
-            group.add(base);
-
-            // Water
-            const waterGeo = new THREE.CircleGeometry(0.25, 8);
-            const waterMat = new THREE.MeshStandardMaterial({
-                color: 0x0000ff,
-            });
-            const water = new THREE.Mesh(waterGeo, waterMat);
-            water.rotation.x = -Math.PI / 2;
-            water.position.y = 0.35 + 0.1;
-            group.add(water);
-
-            // Roof Supports
-            const supportGeo = new THREE.BoxGeometry(0.05, 0.5, 0.05);
-            const supportMat = new THREE.MeshStandardMaterial({
-                color: 0x8b4513,
-            });
-
-            const s1 = new THREE.Mesh(supportGeo, supportMat);
-            s1.position.set(-0.2, 0.45 + 0.1, 0);
-            s1.castShadow = true;
-            s1.receiveShadow = true;
-            group.add(s1);
-
-            const s2 = new THREE.Mesh(supportGeo, supportMat);
-            s2.position.set(0.2, 0.45 + 0.1, 0);
-            s2.castShadow = true;
-            s2.receiveShadow = true;
-            group.add(s2);
-
-            // Roof
-            const roofGeo = new THREE.ConeGeometry(0.4, 0.2, 4);
-            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-            const roof = new THREE.Mesh(roofGeo, roofMat);
-            roof.position.y = 0.7 + 0.1 + 0.1;
-            roof.rotation.y = Math.PI / 4;
-            roof.castShadow = true;
-            roof.receiveShadow = true;
-            group.add(roof);
-
-            cropsGroup.add(group);
-        };
-
-        // Generate Grid
-        const crops = [
-            "wheat",
-            "carrot",
-            "tomato",
-            "pine",
-            "oak",
-            "apple",
-            "mango",
-        ] as const;
-        const startZ = 5;
-        const startX = -2;
-        const spacingX = 1;
-        const spacingZ = 1;
-
-        crops.forEach((crop, rowIndex) => {
-            const maxStage = crop === "apple" || crop === "mango" ? 5 : 4;
-            const isTree = ["pine", "oak", "apple", "mango"].includes(crop);
-
-            for (let stage = 1; stage <= maxStage; stage++) {
-                const x = startX + (stage - 1) * spacingX;
-                const z = startZ - rowIndex * spacingZ;
-
-                if (isTree) {
-                    createGrassBase(x, z);
-                } else {
-                    createSoilBase(x, z);
-                }
-                createCrop(crop, stage as 1 | 2 | 3 | 4 | 5, x, z);
-            }
-        });
-
-        // Add House and Well
-        createGrassBase(4, 0);
-        createGrassBase(5, 0);
-        createGrassBase(4, -1);
-        createGrassBase(5, -1);
-        createHouse(4.5, -0.5);
-
-        createGrassBase(4, -3);
-        createWell(4, -3);
+        mounted = true;
 
         const animate = () => {
             frameId = requestAnimationFrame(animate);
-
             controls.update();
-
             renderer.render(scene, camera);
         };
-
         animate();
 
         const handleResize = () => {
@@ -575,7 +210,6 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         };
-
         window.addEventListener("resize", handleResize);
 
         return () => {
@@ -583,23 +217,25 @@
             cancelAnimationFrame(frameId);
             controls.dispose();
             renderer.dispose();
-
-            groundGeometry.dispose();
-            groundMaterial.dispose();
-
-            soilGeometry.dispose();
-            soilMaterial.dispose();
-            grassTopGeometry.dispose();
-            grassMaterial.dispose();
-            pathTopGeometry.dispose();
-            pathMaterial.dispose();
+            gameObjects.forEach((obj) => obj.removeFromScene(scene));
         };
     });
 </script>
 
 <div bind:this={container} class="scene-container"></div>
 
-<button class="back-button" onclick={onBack}>Back to Menu</button>
+<div class="ui-overlay">
+    <button class="back-button" onclick={onBack}>Back to Menu</button>
+
+    <div class="controls">
+        <label for="type-select">Display:</label>
+        <select id="type-select" bind:value={selectedType}>
+            {#each objectTypes as type}
+                <option value={type}>{type}</option>
+            {/each}
+        </select>
+    </div>
+</div>
 
 <style>
     .scene-container {
@@ -608,10 +244,17 @@
         overflow: hidden;
     }
 
-    .back-button {
+    .ui-overlay {
         position: absolute;
         top: 20px;
         left: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 100;
+    }
+
+    .back-button {
         padding: 8px 16px;
         background: rgba(255, 255, 255, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.4);
@@ -621,10 +264,27 @@
         backdrop-filter: blur(4px);
         transition: all 0.2s;
         font-family: sans-serif;
-        z-index: 100;
+        width: fit-content;
     }
 
     .back-button:hover {
         background: rgba(255, 255, 255, 0.3);
+    }
+
+    .controls {
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 4px;
+        color: white;
+        font-family: sans-serif;
+        backdrop-filter: blur(4px);
+    }
+
+    select {
+        margin-left: 8px;
+        padding: 4px;
+        border-radius: 4px;
+        border: none;
+        background: rgba(255, 255, 255, 0.9);
     }
 </style>
