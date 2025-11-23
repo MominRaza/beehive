@@ -15,6 +15,8 @@
         { id: "oak", name: "Oak", color: "#006400" },
         { id: "apple", name: "Apple", color: "#ff4500" },
         { id: "mango", name: "Mango", color: "#ffd700" },
+        { id: "house", name: "House", color: "#f5f5dc" },
+        { id: "well", name: "Well", color: "#808080" },
         { id: "harvest", name: "Harvest", color: "#ff69b4" },
         { id: "harvest_fruit", name: "Pick Fruit", color: "#ff1493" },
         { id: "axe", name: "Axe", color: "#708090" },

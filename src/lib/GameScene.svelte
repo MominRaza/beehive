@@ -161,6 +161,24 @@
             color: 0xffd700,
         }); // Gold
 
+        // House Materials
+        const houseBaseMat = new THREE.MeshStandardMaterial({
+            color: 0xf5f5dc,
+        }); // Beige
+        const houseRoofMat = new THREE.MeshStandardMaterial({
+            color: 0x8b0000,
+        }); // DarkRed
+        const houseDoorMat = new THREE.MeshStandardMaterial({
+            color: 0x4a3c31,
+        }); // Dark Wood
+
+        // Well Materials
+        const wellBaseMat = new THREE.MeshStandardMaterial({ color: 0x808080 }); // Gray Stone
+        const wellWaterMat = new THREE.MeshStandardMaterial({
+            color: 0x0000ff,
+        }); // Blue
+        const wellWoodMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 }); // Brown
+
         // Pine Geometries
         const pineStage2Geo = new THREE.ConeGeometry(0.15, 0.4, 8);
         const pineTrunkSmallGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
@@ -177,6 +195,17 @@
         const oakFoliageLargeGeo = new THREE.DodecahedronGeometry(0.4);
         const fruitGeo = new THREE.SphereGeometry(0.08);
 
+        // House Geometries
+        const houseBaseGeo = new THREE.BoxGeometry(1.8, 1.0, 1.8);
+        const houseRoofGeo = new THREE.ConeGeometry(1.3, 0.6, 4);
+        const houseDoorGeo = new THREE.BoxGeometry(0.4, 0.6, 0.05);
+
+        // Well Geometries
+        const wellBaseGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.4, 8);
+        const wellWaterGeo = new THREE.CircleGeometry(0.25, 8);
+        const wellSupportGeo = new THREE.BoxGeometry(0.05, 0.5, 0.05);
+        const wellRoofGeo = new THREE.ConeGeometry(0.4, 0.2, 4);
+
         const tiles = new Map<string, THREE.Object3D>();
         const crops = new Map<
             string,
@@ -186,6 +215,7 @@
                 stage: number;
                 plantedAt: number;
                 lastStageUpdate: number;
+                occupiedKeys?: string[];
             }
         >();
 
@@ -248,9 +278,15 @@
             z: number,
         ) => {
             const group = new THREE.Group();
-            const isTree = ["pine", "oak", "apple", "mango"].includes(type);
-            const y = isTree ? 0.2 : 0.1;
-            group.position.set(x, y, z);
+
+            // Position logic
+            if (type === "house") {
+                group.position.set(x + 0.5, 0.2, z + 0.5);
+            } else if (["pine", "oak", "apple", "mango"].includes(type)) {
+                group.position.set(x, 0.2, z);
+            } else {
+                group.position.set(x, 0.1, z);
+            }
 
             const addMesh = (mesh: THREE.Mesh) => {
                 mesh.castShadow = true;
@@ -258,7 +294,42 @@
                 group.add(mesh);
             };
 
-            if (stage === 1) {
+            if (type === "house") {
+                const base = new THREE.Mesh(houseBaseGeo, houseBaseMat);
+                base.position.y = 0.5;
+                addMesh(base);
+
+                const roof = new THREE.Mesh(houseRoofGeo, houseRoofMat);
+                roof.position.y = 1.0 + 0.3;
+                roof.rotation.y = Math.PI / 4;
+                addMesh(roof);
+
+                const door = new THREE.Mesh(houseDoorGeo, houseDoorMat);
+                door.position.set(0, 0.3, 0.9);
+                addMesh(door);
+            } else if (type === "well") {
+                const base = new THREE.Mesh(wellBaseGeo, wellBaseMat);
+                base.position.y = 0.2;
+                addMesh(base);
+
+                const water = new THREE.Mesh(wellWaterGeo, wellWaterMat);
+                water.rotation.x = -Math.PI / 2;
+                water.position.y = 0.35;
+                group.add(water);
+
+                const s1 = new THREE.Mesh(wellSupportGeo, wellWoodMat);
+                s1.position.set(-0.2, 0.45, 0);
+                addMesh(s1);
+
+                const s2 = new THREE.Mesh(wellSupportGeo, wellWoodMat);
+                s2.position.set(0.2, 0.45, 0);
+                addMesh(s2);
+
+                const roof = new THREE.Mesh(wellRoofGeo, wellWoodMat);
+                roof.position.y = 0.7 + 0.1;
+                roof.rotation.y = Math.PI / 4;
+                addMesh(roof);
+            } else if (stage === 1) {
                 const mesh = new THREE.Mesh(sproutGeo, sproutMat);
                 mesh.position.y = 0.1;
                 addMesh(mesh);
@@ -452,8 +523,11 @@
         interactionPlane.rotation.x = -Math.PI / 2;
         scene.add(interactionPlane);
 
+        const highlightGeometry = new THREE.PlaneGeometry(1, 1);
+        highlightGeometry.rotateX(-Math.PI / 2);
+
         const highlightMesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(1, 1),
+            highlightGeometry,
             new THREE.MeshBasicMaterial({
                 color: 0xffffff,
                 transparent: true,
@@ -461,7 +535,6 @@
                 side: THREE.DoubleSide,
             }),
         );
-        highlightMesh.rotation.x = -Math.PI / 2;
         // default a little above the grass top (grass top center 0.15 + half-height 0.05 => 0.2)
         // add small offset so the highlight sits visibly above the tile
         highlightMesh.position.y = 0.22;
@@ -476,8 +549,21 @@
 
         const onMouseClick = () => {
             if (highlightMesh.visible) {
-                const x = highlightMesh.position.x;
-                const z = highlightMesh.position.z;
+                // For 2x2 objects, the highlight is centered at x+0.5, z+0.5
+                // But the "origin" tile (top-left) is still x, z
+                // The raycaster logic in animate() calculates 'x' and 'z' based on the mouse position
+                // We need to use the same logic here or rely on the highlight position.
+                // Let's recalculate x,z from the highlight position to be safe.
+
+                let x = highlightMesh.position.x;
+                let z = highlightMesh.position.z;
+
+                if (selectedSeed === "house") {
+                    // If house, highlight is at x+0.5, z+0.5. We want the top-left tile x,z.
+                    x -= 0.5;
+                    z -= 0.5;
+                }
+
                 const key = `${x},${z}`;
                 const tile = tiles.get(key);
 
@@ -528,15 +614,27 @@
                                     "apple",
                                     "mango",
                                 ].includes(cropData.type);
+                                const isStructure = ["house", "well"].includes(
+                                    cropData.type,
+                                );
                                 const maxStage = ["apple", "mango"].includes(
                                     cropData.type,
                                 )
                                     ? 5
                                     : 4;
-                                if (isTree && cropData.stage === maxStage) {
+                                if (
+                                    (isTree && cropData.stage === maxStage) ||
+                                    isStructure
+                                ) {
                                     scene.remove(cropData.mesh);
-                                    crops.delete(key);
-                                    tile.userData.hasCrop = false;
+
+                                    const keysToRemove =
+                                        cropData.occupiedKeys || [key];
+                                    keysToRemove.forEach((k) => {
+                                        crops.delete(k);
+                                        const t = tiles.get(k);
+                                        if (t) t.userData.hasCrop = false;
+                                    });
                                 }
                             }
                         }
@@ -562,6 +660,59 @@
                     } else if (
                         ["pine", "oak", "apple", "mango"].includes(selectedSeed)
                     ) {
+                        if (
+                            tile &&
+                            tile.userData.type === "grass" &&
+                            !tile.userData.hasCrop
+                        ) {
+                            const crop = createCrop(selectedSeed, 1, x, z);
+                            scene.add(crop);
+                            tile.userData.hasCrop = true;
+                            crops.set(key, {
+                                mesh: crop,
+                                type: selectedSeed,
+                                stage: 1,
+                                plantedAt: performance.now(),
+                                lastStageUpdate: performance.now(),
+                            });
+                        }
+                    } else if (selectedSeed === "house") {
+                        // 2x2 Logic
+                        const keys = [
+                            `${x},${z}`,
+                            `${x + 1},${z}`,
+                            `${x},${z + 1}`,
+                            `${x + 1},${z + 1}`,
+                        ];
+                        const valid = keys.every((k) => {
+                            const t = tiles.get(k);
+                            return (
+                                t &&
+                                t.userData.type === "grass" &&
+                                !t.userData.hasCrop
+                            );
+                        });
+
+                        if (valid) {
+                            const crop = createCrop(selectedSeed, 1, x, z);
+                            scene.add(crop);
+
+                            const cropData = {
+                                mesh: crop,
+                                type: selectedSeed,
+                                stage: 1,
+                                plantedAt: performance.now(),
+                                lastStageUpdate: performance.now(),
+                                occupiedKeys: keys,
+                            };
+
+                            keys.forEach((k) => {
+                                const t = tiles.get(k);
+                                if (t) t.userData.hasCrop = true;
+                                crops.set(k, cropData);
+                            });
+                        }
+                    } else if (selectedSeed === "well") {
                         if (
                             tile &&
                             tile.userData.type === "grass" &&
@@ -611,6 +762,14 @@
 
             const now = performance.now();
             crops.forEach((cropData, key) => {
+                // Skip if not a growing crop
+                if (["house", "well"].includes(cropData.type)) return;
+
+                // For multi-tile crops, only process one instance (e.g. the top-left tile)
+                // Since we don't have multi-tile growing crops yet, this is just a safeguard
+                if (cropData.occupiedKeys && cropData.occupiedKeys[0] !== key)
+                    return;
+
                 const maxStage = ["apple", "mango"].includes(cropData.type)
                     ? 5
                     : 4;
@@ -626,7 +785,10 @@
                     )
                         growthTime = 20000;
 
-                    if (now - cropData.lastStageUpdate > growthTime) {
+                    if (
+                        growthTime > 0 &&
+                        now - cropData.lastStageUpdate > growthTime
+                    ) {
                         // Upgrade stage
                         scene.remove(cropData.mesh);
                         const [xStr, zStr] = key.split(",");
@@ -659,8 +821,15 @@
 
                 // Check bounds (12x12 grid centered at 0,0 means -6 to 6)
                 if (x > -6 && x < 6 && z > -6 && z < 6) {
-                    highlightMesh.position.x = x;
-                    highlightMesh.position.z = z;
+                    if (selectedSeed === "house") {
+                        highlightMesh.scale.set(2, 1, 2);
+                        highlightMesh.position.x = x + 0.5;
+                        highlightMesh.position.z = z + 0.5;
+                    } else {
+                        highlightMesh.scale.set(1, 1, 1);
+                        highlightMesh.position.x = x;
+                        highlightMesh.position.z = z;
+                    }
 
                     // set the highlight height depending on the tile type (soil vs grass)
                     const key = `${x},${z}`;

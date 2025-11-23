@@ -429,6 +429,95 @@
             cropsGroup.add(group);
         };
 
+        const createHouse = (x: number, z: number) => {
+            const group = new THREE.Group();
+            group.position.set(x, 0, z);
+
+            // Base (Walls)
+            const baseGeo = new THREE.BoxGeometry(1.8, 1.0, 1.8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0xf5f5dc }); // Beige
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.5 + 0.1; // 0.5 (half height) + 0.1 (ground offset)
+            base.castShadow = true;
+            base.receiveShadow = true;
+            group.add(base);
+
+            // Roof
+            const roofGeo = new THREE.ConeGeometry(1.3, 0.6, 4);
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b0000 }); // DarkRed
+            const roof = new THREE.Mesh(roofGeo, roofMat);
+            roof.position.y = 1.0 + 0.3 + 0.1; // 1.0 (base height) + 0.3 (half roof height) + 0.1
+            roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true;
+            roof.receiveShadow = true;
+            group.add(roof);
+
+            // Door
+            const doorGeo = new THREE.BoxGeometry(0.4, 0.6, 0.05);
+            const doorMat = new THREE.MeshStandardMaterial({ color: 0x4a3c31 }); // Dark Wood
+            const door = new THREE.Mesh(doorGeo, doorMat);
+            door.position.set(0, 0.4, 0.9); // Front face
+            door.castShadow = true;
+            door.receiveShadow = true;
+            group.add(door);
+
+            cropsGroup.add(group);
+        };
+
+        const createWell = (x: number, z: number) => {
+            const group = new THREE.Group();
+            group.position.set(x, 0, z);
+
+            // Base
+            const baseGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.4, 8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x808080 }); // Gray Stone
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.2 + 0.1;
+            base.castShadow = true;
+            base.receiveShadow = true;
+            group.add(base);
+
+            // Water
+            const waterGeo = new THREE.CircleGeometry(0.25, 8);
+            const waterMat = new THREE.MeshStandardMaterial({
+                color: 0x0000ff,
+            });
+            const water = new THREE.Mesh(waterGeo, waterMat);
+            water.rotation.x = -Math.PI / 2;
+            water.position.y = 0.35 + 0.1;
+            group.add(water);
+
+            // Roof Supports
+            const supportGeo = new THREE.BoxGeometry(0.05, 0.5, 0.05);
+            const supportMat = new THREE.MeshStandardMaterial({
+                color: 0x8b4513,
+            });
+
+            const s1 = new THREE.Mesh(supportGeo, supportMat);
+            s1.position.set(-0.2, 0.45 + 0.1, 0);
+            s1.castShadow = true;
+            s1.receiveShadow = true;
+            group.add(s1);
+
+            const s2 = new THREE.Mesh(supportGeo, supportMat);
+            s2.position.set(0.2, 0.45 + 0.1, 0);
+            s2.castShadow = true;
+            s2.receiveShadow = true;
+            group.add(s2);
+
+            // Roof
+            const roofGeo = new THREE.ConeGeometry(0.4, 0.2, 4);
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+            const roof = new THREE.Mesh(roofGeo, roofMat);
+            roof.position.y = 0.7 + 0.1 + 0.1;
+            roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true;
+            roof.receiveShadow = true;
+            group.add(roof);
+
+            cropsGroup.add(group);
+        };
+
         // Generate Grid
         const crops = [
             "wheat",
@@ -460,6 +549,16 @@
                 createCrop(crop, stage as 1 | 2 | 3 | 4 | 5, x, z);
             }
         });
+
+        // Add House and Well
+        createGrassBase(4, 0);
+        createGrassBase(5, 0);
+        createGrassBase(4, -1);
+        createGrassBase(5, -1);
+        createHouse(4.5, -0.5);
+
+        createGrassBase(4, -3);
+        createWell(4, -3);
 
         const animate = () => {
             frameId = requestAnimationFrame(animate);
