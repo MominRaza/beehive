@@ -29,7 +29,7 @@ export abstract class GameObject {
         });
     }
 
-    update(time: number): void {
+    update(_time: number): void {
         // Default implementation does nothing
     };
 }

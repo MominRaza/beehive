@@ -20,6 +20,7 @@
 
     let { onBack }: { onBack: () => void } = $props();
 
+    // oxlint-disable-next-line no-unassigned-vars
     let container: HTMLDivElement;
     let frameId: number;
     let gameObjects: GameObject[] = [];

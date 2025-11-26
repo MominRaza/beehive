@@ -6,6 +6,7 @@
 
     let { onBack } = $props<{ onBack: () => void }>();
 
+    // oxlint-disable-next-line no-unassigned-vars
     let container: HTMLDivElement;
     let frameId: number;
     let selectedSeed = $state<string | null>(null);
