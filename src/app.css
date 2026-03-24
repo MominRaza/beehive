@@ -1,5 +1,15 @@
+:root {
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+  }
+}
+
 body {
   margin: 0;
-  padding: 0;
-  overflow: hidden;
+}
+
+p {
+  margin: 0;
 }
