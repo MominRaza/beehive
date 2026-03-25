@@ -5,6 +5,8 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 export default defineConfig({
   plugins: [svelte()],
   base: '/beehive/',
+
+  test: {},
   lint: {
     options: {
       typeAware: true,
