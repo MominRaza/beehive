@@ -4,6 +4,17 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg: #0d0d0d;
+  --accent: #f5a623;
+  --accent-hover: #ffc04d;
+  --text: #ffffff;
+  --muted: #888;
+  --border: #333;
+  --border-hover: #666;
+  --radius: 4px;
+}
+
 body {
   margin: 0;
   font-family:
